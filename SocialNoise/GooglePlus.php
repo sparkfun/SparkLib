@@ -45,11 +45,15 @@ class GooglePlus extends \SparkLib\SocialNoise {
       if (isset($activity->object->attachments)) {
         foreach($activity->object->attachments as $attached) {
           if (isset($attached->displayName)) {
-            $html .= '<br><a href="' . $attached->url . '">' . $attached->displayName . '</a>';
+            $html .= '<br><a href="'
+                   . htmlspecialchars($attached->url)
+                   . '">' . htmlspecialchars($attached->displayName) . '</a>';
           }
         }
       }
-      $html .= '<br><i><small><a href="' . $activity->url . '">' . $activity->published . '</a></small></i></td></tr>';
+      $html .= '<br><i><small><a href="'
+             . htmlspecialchars($activity->url)
+             . '">' . $activity->published . '</a></small></i></td></tr>';
     }
     $html .= '</table>';
 
