@@ -82,7 +82,7 @@ class Autoloader {
     // If we got here, try for a corresponding file in classes
     if (! isset($path)) {
       $class = str_replace('\\', SLASH, $class);
-      $path = 'classes' . SLASH . '/' . $class . '.php';
+      $path = 'classes' . SLASH . $class . '.php';
     }
 
     $full_path = AUTOLOADER_INCLUDE_ROOT . SLASH . $path;
