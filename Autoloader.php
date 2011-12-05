@@ -3,23 +3,6 @@ namespace SparkLib;
 
 define('SLASH', DIRECTORY_SEPARATOR);
 
-// TODO
-// Get this in full conformance with:
-// http://groups.google.com/group/php-standards/web/psr-0-final-proposal?pli=1
-// ...and see about just setting include_path() instead of knowing an absolute 
-// path to things.
-
-// If LIBDIR isn't defined, assume that this file lives in a path like
-// /somepath/lib/classes/SparkLib/, where we want somepath/lib/ to be
-// our include root...
-if (constant('LIBDIR')) {
-  define('AUTOLOADER_INCLUDE_ROOT', LIBDIR);
-} else {
-  define(
-    'AUTOLOADER_INCLUDE_ROOT',
-    realpath(dirname(__FILE__) . SLASH . '..' . SLASH . '..' . SLASH)
-  );
-}
 
 /**
  * A simple but configurable autoloader. Expects everything to
@@ -60,6 +43,33 @@ class Autoloader {
   public static $searchPaths = array();
 
   /**
+   * Install this puppy as an autoloader, do some basic configuration.
+   */
+  public static function setup ()
+  {
+    // TODO
+    // Get this in full conformance with:
+    // http://groups.google.com/group/php-standards/web/psr-0-final-proposal?pli=1
+    // ...and see about just setting include_path() instead of knowing an absolute 
+    // path to things.
+
+    // If LIBDIR isn't defined, assume that this file lives in a path like
+    // /somepath/lib/classes/SparkLib/, where we want somepath/lib/ to be
+    // our include root...
+    if (constant('LIBDIR')) {
+      define('AUTOLOADER_INCLUDE_ROOT', LIBDIR);
+    } else {
+      define(
+        'AUTOLOADER_INCLUDE_ROOT',
+        realpath(dirname(__FILE__) . SLASH . '..' . SLASH . '..' . SLASH)
+      );
+    }
+
+    // Register autoloaders
+    spl_autoload_register(array('\SparkLib\Autoloader', 'load'));
+  }
+
+  /**
    * Do the actual business of autoloading.
    *
    * @param string name of class
@@ -90,7 +100,5 @@ class Autoloader {
       include $full_path;
     }
   }
-}
 
-// Register autoloaders
-spl_autoload_register(array('\SparkLib\Autoloader', 'load'));
+}
