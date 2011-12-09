@@ -38,9 +38,8 @@ class Text {
     $trans = array("&" => "and",
                    "'" => "");
 
-    $str = strtr($str, $trans);
+    $str = trim(strtr($str, $trans));
 
-    // return str_replace('?', '', Text::asciify($str));
     return Text::asciify($str);
   }
 
