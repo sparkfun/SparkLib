@@ -26,6 +26,11 @@ class Fail {
   protected static $reference      = '';
 
   /**
+   * Image to display with public errors.
+   */
+  public static $img_url = 'http://dlnmh9ip6v2uc.cloudfront.net/images/sparkfail.png';
+
+  /**
    * Send all errors straight to the log?
    */
   public static $errorLogAll = false;
@@ -136,11 +141,7 @@ class Fail {
     if ($errno === \E_DEPRECATED) {
       if (strstr($errfile, 'Barcode.php')) return;
     }
-    if ($errno === \E_WARNING) {
-      if (strstr($errfile, 'Barcode.php')) return;
-      if (strstr($errfile, 'Code39.php')) return;
-    }
-    if ($errno === \E_STRICT) {
+    if (($errno === \E_WARNING) || ($errno === \E_STRICT)) {
       if (strstr($errfile, 'Barcode.php')) return;
       if (strstr($errfile, 'Code39.php')) return;
     }
@@ -249,9 +250,10 @@ class Fail {
    */
   public static function PukePublic ()
   {
+    $img = static::$img_url;
     if (self::$exceptionCount) {
       ?><div style="border: 1px solid black; margin-left: 10%; margin-right: 10%; font-family: Georgia,Times,serif; z-index: 1000;">
-          <img src="http://dlnmh9ip6v2uc.cloudfront.net/images/sparkfail.png" style="float: left;">
+          <img src="<?= $img ?>" style="float: left;">
           <h1>Something broke.</h1>
           <p>...not to worry. We've logged this error and will be looking into it.</p>
           <p>Reference #<?= self::$reference; ?>
