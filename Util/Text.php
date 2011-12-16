@@ -61,6 +61,17 @@ class Text {
     return $ret;
   }
 
+  public static function truncateToWord ($str, $len = 25)
+  {
+    if (strlen($str) > $len) {
+      $ret = wordwrap($str, $len);
+      $ret = substr($ret, 0, strpos($ret, "\n"));
+      $ret .= '&hellip;';
+    } else
+      $ret = $str;
+    return $ret;
+  }
+
 
   /*
    *  The implications of not doing this pluralization sub-engine correctly
