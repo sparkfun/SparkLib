@@ -3,7 +3,6 @@ namespace SparkLib;
 
 define('SLASH', DIRECTORY_SEPARATOR);
 
-
 /**
  * A simple but configurable autoloader. Expects everything to
  * live under the directory specified by LIBDIR, with most classes
@@ -41,6 +40,12 @@ class Autoloader {
    * </code>
    */
   public static $searchPaths = array();
+
+  /**
+   * Set this to define any extra files which should be included
+   * if we fail to find a class.
+   */
+  public static $extraAutoloaders = array();
 
   /**
    * Install this puppy as an autoloader, do some basic configuration.
@@ -98,6 +103,12 @@ class Autoloader {
     $full_path = AUTOLOADER_INCLUDE_ROOT . SLASH . $path;
     if (is_file($full_path)) {
       include $full_path;
+    } else {
+      // If we've got any fallback autoloaders, pull 'em in so
+      // they can try to find the class in question
+      foreach (static::$extraAutoloaders as $autoloader_path) {
+        include_once($autoloader_path);
+      }
     }
   }
 
