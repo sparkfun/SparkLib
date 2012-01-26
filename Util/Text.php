@@ -123,4 +123,17 @@ class Text {
     return implode ('', $parts);
   }
 
+  // I didn't want to use size, file, or filesize for obvious reasons. open to better name...
+  public static function prettyfilesize($bytes)
+  {
+    if ($bytes > 1048575) {
+      $div = $bytes / 1048576;
+      $size = round($div, 1)." MB";
+    } else {
+      $div = $bytes / 1024;
+      $size = round($div, 1)." KB";
+    }
+    return $size;
+  }
+
 }
