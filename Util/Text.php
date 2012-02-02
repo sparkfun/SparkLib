@@ -38,9 +38,8 @@ class Text {
     $trans = array("&" => "and",
                    "'" => "");
 
-    $str = strtr($str, $trans);
+    $str = trim(strtr($str, $trans));
 
-    // return str_replace('?', '', Text::asciify($str));
     return Text::asciify($str);
   }
 
@@ -58,6 +57,17 @@ class Text {
     if(strlen($str) > $len - $pad)
       $ret = '<span title="' . htmlentities($str) . '">' . substr($str, 0, $len) . '&hellip;</span>';
     else
+      $ret = $str;
+    return $ret;
+  }
+
+  public static function truncateToWord ($str, $len = 25)
+  {
+    if (strlen($str) > $len) {
+      $ret = wordwrap($str, $len);
+      $ret = substr($ret, 0, strpos($ret, "\n"));
+      $ret .= '&hellip;';
+    } else
       $ret = $str;
     return $ret;
   }
@@ -111,6 +121,19 @@ class Text {
     foreach ($parts as &$part)
       $part = ucfirst($part);
     return implode ('', $parts);
+  }
+
+  // I didn't want to use size, file, or filesize for obvious reasons. open to better name...
+  public static function prettyfilesize($bytes)
+  {
+    if ($bytes > 1048575) {
+      $div = $bytes / 1048576;
+      $size = round($div, 1)." MB";
+    } else {
+      $div = $bytes / 1024;
+      $size = round($div, 1)." KB";
+    }
+    return $size;
   }
 
 }
