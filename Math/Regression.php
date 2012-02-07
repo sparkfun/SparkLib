@@ -527,6 +527,7 @@ class Regression {
 
     $ret = array('m' => $m);
     for ($r = 0; $r <= $m; $r++){
+      $ret['a'.$r] = 0;
       if (isset($A_content[$r]))
         $ret['a'.$r] = $A_content[$r][0];
     }

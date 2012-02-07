@@ -63,7 +63,7 @@ class matrix
    * @param array $numbers, [int $numRows, int $numColumns] the array of numbers and the dimensions of the matrix.
    * @return The new matrix
    */
-  function matrix()
+  function __construct()
   {
     //See which information is passed as arguments.
     $nArgs = func_num_args();
