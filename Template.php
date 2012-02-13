@@ -313,16 +313,27 @@ class Template {
   }
 
   /**
-   * Generate an HTML table row from an array of cells.
+   * Generate an HTML table row from parameters.
    *
-   * Will call $striper() to produce a class for the row element.
+   * If the first parameter is a callback, treat it as an anonymous
+   * iterator function which will spit out a class name for the row on
+   * each call. (See iterator(), below, for a quickie way to get one
+   * of these.)
    */
-  protected function tableRow ($striper, array $cells)
+  protected function tableRow ()
   {
+    $args = func_get_args();
     $html = '';
-    foreach ($cells as $cell)
+
+    if (is_callable($args[0]))
+      $striper = array_shift($args);
+
+    foreach ($args as $cell)
       $html .= '<td>' . $cell . '</td>';
-    return '<tr class="' . $striper() . '">' . $html . '</tr>';
+
+    return isset($striper)
+      ? '<tr class="' . $striper() . '">' . $html . '</tr>'
+      : '<tr>' . $html . '</tr>';
   }
 
   /**
