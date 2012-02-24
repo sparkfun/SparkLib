@@ -1,10 +1,7 @@
 <?php
 namespace SparkLib;
 use SparkLib\Fail;
-use \stdClass;
-
-// TODO: autoload this
-require_once 'XML/RPC2/Client.php';
+use \jsonRPCClient;
 
 /**
  * Wrap some XML-RPC calls to a Bugzilla installation.
@@ -31,16 +28,12 @@ class Bugzilla {
    */
   public function bug ($id)
   {
-    $options = array('prefix' => 'Bug.');
-
-    $client = \XML_RPC2_Client::create($this->_uri, $options);
+    $client = new jsonRPCClient($this->_uri);
 
     try {
-      $result = $client->get(
-        array('ids' => array($id)
-      ));
-    } catch (\XML_RPC2_FaultException $e) {
-      Fail::log('bug not found: ' . $e->getFaultCode() . ' ' . $e->getFaultString());
+      $result = $client->__call('Bug.get', array(array('ids' => array($id))));
+    } catch (\Exception $e) {
+      Fail::log($e);
       return false;
     }
 
@@ -59,21 +52,28 @@ class Bugzilla {
    */
   public function search (array $params)
   {
-    $options = array('prefix' => 'Bug.');
-    $client = \XML_RPC2_Client::create($this->_uri, $options);
-
+    $client = new jsonRPCClient($this->_uri);
     try {
-      $result = $client->search($params);
-    } catch (\XML_RPC2_FaultException $e) {
-      Fail::log('search failed: ' . $e->getFaultCode() . ' ' . $e->getFaultString());
+      $result = ($client->__call('Bug.search', array($params)));
+    } catch (\Exception $e) {
+      Fail::log($e);
       return false;
     }
 
     $bugs = array();
-    foreach ($result['bugs'] as $bug) {
-      $bugs[] = (object)$bug;
+    for($i = 0, $c = count($result['bugs']); $i < $c; ++$i) {
+      $bugs[] = (object)$result['bugs'][$i];
     }
+
     return $bugs;
+  }
+
+  protected function getClient ($prefix)
+  {
+    $options = array(
+      'prefix' => "$prefix.",
+    );
+    return \XML_RPC2_Client::create($this->_uri, $options);
   }
 
 }
