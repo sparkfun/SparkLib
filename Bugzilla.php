@@ -4,7 +4,7 @@ use SparkLib\Fail;
 use \jsonRPCClient;
 
 /**
- * Wrap some XML-RPC calls to a Bugzilla installation.
+ * Wrap various API calls to a Bugzilla installation.
  */
 class Bugzilla {
 
@@ -28,7 +28,7 @@ class Bugzilla {
    */
   public function bug ($id)
   {
-    $client = new jsonRPCClient($this->_uri);
+    $client = new jsonRPCClient($this->_uri . 'jsonrpc.cgi');
 
     try {
       $result = $client->__call('Bug.get', array(array('ids' => array($id))));
@@ -52,7 +52,7 @@ class Bugzilla {
    */
   public function search (array $params)
   {
-    $client = new jsonRPCClient($this->_uri);
+    $client = new jsonRPCClient($this->_uri . 'jsonrpc.cgi');
     try {
       $result = ($client->__call('Bug.search', array($params)));
     } catch (\Exception $e) {
@@ -68,12 +68,27 @@ class Bugzilla {
     return $bugs;
   }
 
-  protected function getClient ($prefix)
+  /**
+   * Search for a substring in a custom field. Returns, lame as this is,
+   * an array of SimpleXML objects from the Atom version of a search result.
+   */
+  public function searchCustomField($field, $string)
   {
-    $options = array(
-      'prefix' => "$prefix.",
-    );
-    return \XML_RPC2_Client::create($this->_uri, $options);
+    $search_url = 'buglist.cgi?query_format=advanced&f1=cf_'
+                . urlencode($field)
+                . '&v1='
+                . urlencode($string)
+                . '&o1=substring&ctype=atom';
+
+    $atom = \file_get_contents($this->_uri . $search_url);
+    $result = \simplexml_load_string($atom);
+    $bugs = array();
+
+    foreach ($result->entry as $bug) {
+      $bugs[] = $bug;
+    }
+
+    return $bugs;
   }
 
 }
