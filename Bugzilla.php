@@ -69,8 +69,8 @@ class Bugzilla {
   }
 
   /**
-   * Search for a substring in a custom field. Returns, lame as this is,
-   * an array of SimpleXML objects from the Atom version of a search result.
+   * Search for a substring in a custom field. Returns an array of simple
+   * bug objects extracted from CSV. (XML can suck it.)
    */
   public function searchCustomField($field, $string)
   {
@@ -78,14 +78,21 @@ class Bugzilla {
                 . urlencode($field)
                 . '&v1='
                 . urlencode($string)
-                . '&o1=substring&ctype=atom';
+                . '&o1=substring&order=Bug&ctype=csv';
 
-    $atom = \file_get_contents($this->_uri . $search_url);
-    $result = \simplexml_load_string($atom);
+    $csv  = file_get_contents($this->_uri . $search_url);
+
     $bugs = array();
 
-    foreach ($result->entry as $bug) {
-      $bugs[] = $bug;
+    $rows = explode("\n", $csv);
+    $fields = str_getcsv(array_shift($rows));
+    foreach ($rows as &$row) {
+      $values = str_getcsv($row);
+      $bug = array();
+      foreach ($values as $idx => $value) {
+        $bug[ $fields[$idx] ] = $value;
+      }
+      $bugs[] = (object)$bug; // make a stdClass instance
     }
 
     return $bugs;
