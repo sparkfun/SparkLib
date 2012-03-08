@@ -98,4 +98,28 @@ class Bugzilla {
     return $bugs;
   }
 
+  public function searchCC ($user)
+  {
+    $search_url = 'buglist.cgi?query_format=advanced&emailcc1=1'
+                . '&email1=' . urlencode($user)
+                . '&emailtype1=substring&order=Bug&ctype=csv';
+
+    $csv  = file_get_contents($this->_uri . $search_url);
+
+    $bugs = array();
+
+    $rows = explode("\n", $csv);
+    $fields = str_getcsv(array_shift($rows));
+    foreach ($rows as &$row) {
+      $values = str_getcsv($row);
+      $bug = array();
+      foreach ($values as $idx => $value) {
+        $bug[ $fields[$idx] ] = $value;
+      }
+      $bugs[] = (object)$bug; // make a stdClass instance
+    }
+
+    return $bugs;
+  }
+
 }
