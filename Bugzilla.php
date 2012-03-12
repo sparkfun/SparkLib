@@ -1,7 +1,8 @@
 <?php
 namespace SparkLib;
+
 use SparkLib\Fail;
-use \jsonRPCClient;
+use SparkLib\jsonRPC\Client;
 
 /**
  * Wrap various API calls to a Bugzilla installation.
@@ -28,7 +29,7 @@ class Bugzilla {
    */
   public function bug ($id)
   {
-    $client = new jsonRPCClient($this->_uri . 'jsonrpc.cgi');
+    $client = new Client($this->_uri . 'jsonrpc.cgi');
 
     try {
       $result = $client->__call('Bug.get', array(array('ids' => array($id))));
@@ -52,7 +53,7 @@ class Bugzilla {
    */
   public function search (array $params)
   {
-    $client = new jsonRPCClient($this->_uri . 'jsonrpc.cgi');
+    $client = new Client($this->_uri . 'jsonrpc.cgi');
     try {
       $result = ($client->__call('Bug.search', array($params)));
     } catch (\Exception $e) {
