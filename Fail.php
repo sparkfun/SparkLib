@@ -276,6 +276,8 @@ class Fail {
     if (self::noFail() || self::$errorLogAll)
       return;
 
+    $img_url = static::$img_url;
+
     // fuuuuuugly:
     print <<<HTML
 <style>
@@ -287,7 +289,7 @@ class Fail {
     color: red;
     border: 1px solid black;
     padding: 10px;
-    background-image: url(images/sparkfail.png);
+    background-image: url({$img_url});
     background-repeat: no-repeat;
     padding-bottom: 150px;
     background-position: bottom right;
