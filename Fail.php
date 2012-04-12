@@ -36,6 +36,12 @@ class Fail {
   public static $errorLogAll = false;
 
   /**
+   * Log to a specific file via file_put_contents() instead of using
+   * error_log().
+   */
+  public static $logFile = null;
+
+  /**
    * Break out backtraces for php E_ errors/warning/notices/whatever
    */
   public static $doBacktraces = false;
@@ -122,7 +128,11 @@ class Fail {
     self::$failCount++;
     self::$failText .= $message_text;
 
-    error_log($message_text);
+    if (isset(self::$logFile)) {
+      file_put_contents(self::$logFile, $message_text, \FILE_APPEND);
+    } else {
+      error_log($message_text);
+    }
   }
 
   /**
