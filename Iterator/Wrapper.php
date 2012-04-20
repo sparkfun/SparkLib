@@ -36,7 +36,7 @@ class Wrapper extends \SparkLib\Iterator {
 
   public function __call ($name, $arguments)
   {
-    return call_user_func(array($this->_iterator, $name), $arguments);
+    return call_user_func_array(array($this->_iterator, $name), $arguments);
   }
 
 }
