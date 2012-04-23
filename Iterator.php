@@ -22,14 +22,16 @@ abstract class Iterator implements \Iterator {
 
     // handle first/current result
     $rec = $this->getNext();
-    if (false === $rec)
+    if (! $rec)
       return $this;
     call_user_func($function, $rec);
 
     // handle the rest, if any
     while ($this->valid()) {
       $rec = $this->getNext();
-      call_user_func($function, $rec);
+      if ($rec) {
+        call_user_func($function, $rec);
+      }
     }
 
     return $this;
@@ -50,7 +52,7 @@ abstract class Iterator implements \Iterator {
 
     // handle first/current result
     $rec = $this->getNext();
-    if (false === $rec)
+    if (! $rec)
       return $results;
     $results[] = call_user_func($function, $rec);
 

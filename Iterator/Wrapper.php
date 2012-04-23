@@ -14,13 +14,20 @@ class Wrapper extends \SparkLib\Iterator {
 
   public function current ()
   {
-    return $this->makeInstance($this->_iterator->current());
+    if ($this->_iterator->valid()) {
+      return $this->makeInstance($this->_iterator->current());
+    } else {
+      return $this->_iterator->current();
+    }
   }
 
-  // not sure this belongs here, but...
   public function getNext ()
   {
-    return $this->makeInstance($this->_iterator->getNext());
+    $result = $this->_iterator->getNext();
+    if ($result)
+      return $this->makeInstance($result);
+    else
+      return $result;
   }
 
   protected function makeInstance ($result)
@@ -29,14 +36,21 @@ class Wrapper extends \SparkLib\Iterator {
     return new $wclass($result);
   }
 
-  public function key    () { return $this->_iterator->key();    }
-  public function next   () { return $this->_iterator->next();   }
-  public function rewind () { return $this->_iterator->rewind(); }
-  public function valid  () { return $this->_iterator->valid();  }
-
+  /**
+   * Pass method calls through to the underlying iterator.
+   */
   public function __call ($name, $arguments)
   {
     return call_user_func_array(array($this->_iterator, $name), $arguments);
   }
+
+  /**
+   * These could be handled by __call(), except we're implementing
+   * the SPL Iterator interface, and it expects them to be defined.
+   */
+  public function key    () { return $this->_iterator->key();    }
+  public function next   () { return $this->_iterator->next();   }
+  public function rewind () { return $this->_iterator->rewind(); }
+  public function valid  () { return $this->_iterator->valid();  }
 
 }
