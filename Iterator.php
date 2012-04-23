@@ -59,7 +59,9 @@ abstract class Iterator implements \Iterator {
     // handle the rest, if any
     while ($this->valid()) {
       $rec = $this->getNext();
-      $results[] = call_user_func($function, $rec);
+      if ($rec) {
+        $results[] = call_user_func($function, $rec);
+      }
     }
 
     return $results;
