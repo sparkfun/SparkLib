@@ -120,8 +120,9 @@ class Fail {
     }
 
     // If blode is sitting around, send it our message.
-    if (class_exists('\BlodeEvent'))
+    if (class_exists('\BlodeEvent')) {
       \BlodeEvent::err($message_text);
+    }
 
     $message_text .= "\n";
 
@@ -129,7 +130,9 @@ class Fail {
     self::$failText .= $message_text;
 
     if (isset(self::$logFile)) {
-      file_put_contents(self::$logFile, $message_text, \FILE_APPEND);
+      // Note deliberate error suppression; there's a good chance this
+      // write will fail from the command line.
+      @file_put_contents(self::$logFile, $message_text, \FILE_APPEND);
     } else {
       error_log($message_text);
     }
@@ -314,7 +317,7 @@ class Fail {
 <hr>
 HTML;
 
-    print self::render() . "\n</pre>";
+    print \wordwrap(self::render(), 100, "\n\t") . "\n</pre>";
     print "<script language=\"javascript\">$('body').keyup(function(e) { if(e.keyCode == 67) { $('#sparkfail-errors').hide() }; });</script>";
   }
 
