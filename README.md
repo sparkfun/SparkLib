@@ -2,7 +2,7 @@ SparkLib
 --------
 
 SparkLib is a modest collection of PHP libraries from your friends at SparkFun
-electronics.
+Electronics.
 
 We find these useful; maybe you will too. That said, we lay no special claims
 to originality or general applicability.  Interfaces herein are unstable, the
@@ -21,5 +21,6 @@ Contents include:
 * SocialNoise - quick and dirty display of search results for some social networks
 * Template - a simple interface for using PHP files as templates
 * Util - a miscellany
+* jsonRPC - a half-baked fork of Sergio Vaccaro's JSON-RPC code
 
--- BPB
+-- bpb
