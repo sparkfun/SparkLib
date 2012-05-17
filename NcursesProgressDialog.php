@@ -71,4 +71,11 @@ class NcursesProgressDialog {
     if ($place >= $this->limit) ncurses_end();
   }
 
+  public function __destruct ()
+  {
+    if (! ncurses_isendwin()) {
+      ncurses_end();
+    }
+  }
+
 }
