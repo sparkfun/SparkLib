@@ -36,6 +36,12 @@ class Fail {
   public static $errorLogAll = false;
 
   /**
+   * Log to a specific file via file_put_contents() instead of using
+   * error_log().
+   */
+  public static $logFile = null;
+
+  /**
    * Break out backtraces for php E_ errors/warning/notices/whatever
    */
   public static $doBacktraces = false;
@@ -114,15 +120,22 @@ class Fail {
     }
 
     // If blode is sitting around, send it our message.
-    if (class_exists('\BlodeEvent'))
+    if (class_exists('\BlodeEvent')) {
       \BlodeEvent::err($message_text);
+    }
 
     $message_text .= "\n";
 
     self::$failCount++;
     self::$failText .= $message_text;
 
-    error_log($message_text);
+    if (isset(self::$logFile)) {
+      // Note deliberate error suppression; there's a good chance this
+      // write will fail from the command line.
+      @file_put_contents(self::$logFile, $message_text, \FILE_APPEND);
+    } else {
+      error_log($message_text);
+    }
   }
 
   /**
@@ -276,6 +289,8 @@ class Fail {
     if (self::noFail() || self::$errorLogAll)
       return;
 
+    $img_url = static::$img_url;
+
     // fuuuuuugly:
     print <<<HTML
 <style>
@@ -287,7 +302,7 @@ class Fail {
     color: red;
     border: 1px solid black;
     padding: 10px;
-    background-image: url(images/sparkfail.png);
+    background-image: url({$img_url});
     background-repeat: no-repeat;
     padding-bottom: 150px;
     background-position: bottom right;
@@ -302,7 +317,7 @@ class Fail {
 <hr>
 HTML;
 
-    print self::render() . "\n</pre>";
+    print \wordwrap(self::render(), 100, "\n\t") . "\n</pre>";
     print "<script language=\"javascript\">$('body').keyup(function(e) { if(e.keyCode == 67) { $('#sparkfail-errors').hide() }; });</script>";
   }
 

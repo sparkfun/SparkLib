@@ -319,17 +319,25 @@ class Template {
    * iterator function which will spit out a class name for the row on
    * each call. (See iterator(), below, for a quickie way to get one
    * of these.)
+   *
+   * Will also work with an array.
    */
   protected function tableRow ()
   {
     $args = func_get_args();
     $html = '';
 
-    if (is_callable($args[0]))
+    if ((func_num_args() >= 2) && is_callable($args[0])) {
+      // callback for class
       $striper = array_shift($args);
+    } elseif ((func_num_args() === 1) && is_array($args[0])) {
+      // array instead of multiple params
+      $args = $args[0];
+    }
 
-    foreach ($args as $cell)
+    foreach ($args as &$cell) {
       $html .= '<td>' . $cell . '</td>';
+    }
 
     return isset($striper)
       ? '<tr class="' . $striper() . '">' . $html . '</tr>'
