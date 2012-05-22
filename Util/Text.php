@@ -16,11 +16,15 @@ class Text {
    * Transliterate a string in a given source character set to the nearest
    * ASCII equivalent (according to iconv()).
    *
+   * TODO: IGNORE may fail on versions of PHP > 5.4
+   *       http://www.php.net/manual/en/function.iconv.php
+   *       https://bugs.php.net/bug.php?id=61484
+   *
    * @param $text string to convert
    * @param $source_charset string name of source character set
    * @return string
    */
-  public static function asciify ($text, $source_charset = 'ISO-8859-1')
+  public static function asciify ($text, $source_charset = 'UTF-8')
   {
     return \iconv($source_charset, "ASCII//TRANSLIT//IGNORE", $text);
   }
@@ -72,33 +76,13 @@ class Text {
     return $ret;
   }
 
-
-  /*
-   *  The implications of not doing this pluralization sub-engine correctly
-   *  kind of terrify me.  No really.  Think about the word 'Media'.  What is
-   *  the plural of that!? Dammit English...what the crap.
-   *
-   *  Trick question! 'Media' like 'data' is commonly misunderstood plural.
-   *  We don't want no datas.
-   *
-   *  Hint: the singulars are 'Medium' and 'Datum'.
-   *
-   *  Cases I can think of off the top of my head:
-   *  Batch -> Batches
-   *  Media -> Medium
-   *  Category -> Categories
-   *  Deer -> Deer
-   *  Saurus -> Saurii
-   *
-   */
   public static function depluralize($word)
   {
-    return rtrim($word, 's');
+    return rtrim($word, 's'); // heh
   }
 
   public static function pluralize($word)
   {
-    // mmmm...inflector...want...
     if (substr($word,-1)==='s')
       return $word;
     return $word . 's';
