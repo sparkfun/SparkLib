@@ -149,7 +149,6 @@ class Fail {
     if ($errno === \E_NOTICE) {
       if (stristr($errstr, 'undefined index'))  return;
       if (strstr($errfile, 'Test.php'))         return;
-      if (strstr($errfile, 'EndiciaQuote.php')) return;
     }
     if ($errno === \E_DEPRECATED) {
       if (strstr($errfile, 'Barcode.php')) return;
