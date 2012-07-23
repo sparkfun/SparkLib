@@ -4,10 +4,23 @@ use InvalidArgumentException;
 
 abstract class Iterator implements \Iterator {
 
+  protected $_useCache = false;
+
   /**
    * Require that children of this class implement a getNext()
    */
   abstract public function getNext ();
+
+  /**
+   * Should child classes attempt to use cached return values?
+   *
+   * It's up to a child to decide what, if anything, this means.
+   */
+  public function useCache ($value = true)
+  {
+    $this->_useCache = $value;
+    return $this;
+  }
 
   /**
    * Calls $function() on each remaining element in the iterator.
