@@ -124,6 +124,9 @@ class Fail {
       \BlodeEvent::err($message_text);
     }
 
+    if (isset($_SERVER['HTTP_USER_AGENT']))
+      $message_text .= ' [' . $_SERVER['HTTP_USER_AGENT'] . ']';
+
     $message_text .= "\n";
 
     self::$failCount++;
