@@ -5,6 +5,8 @@ class GooglePlus extends \SparkLib\SocialNoise {
 
   protected $_key = null;
 
+  public $tableClass = '';
+
   /**
    * Make a new GooglePlus object that knows about a given API key.
    *
@@ -32,7 +34,7 @@ class GooglePlus extends \SparkLib\SocialNoise {
   {
     $result = $this->search($text, $qty);
 
-    $html = '<table>';
+    $html = '<table class="' . htmlspecialchars($this->tableClass) . '">';
 
     foreach ($result->items as $activity) {
       $html .= '<tr>'
