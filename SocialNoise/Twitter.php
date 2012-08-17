@@ -1,6 +1,8 @@
 <?php
 namespace SparkLib\SocialNoise;
 
+use \SparkLib\Fail;
+
 /**
  * This is based on:
  *
@@ -38,6 +40,9 @@ class Twitter extends \SparkLib\SocialNoise {
   {
     $url = 'https://search.twitter.com/search.json?q=' . rawurlencode($text);
     $searchResults = static::getSearchFromJson($url);
+
+    if (! $searchResults)
+      return '<p>Search failure.</p>';
 
     // Set up our string format templates
     $img       = '<img src="%s" height=48 width=48/>';

@@ -18,7 +18,6 @@ class SocialNoise {
   public static function getSearchFromJson ($url)
   {
     $search = function () use ($url) {
-
       // humbly submitted: this is a stupid interface.
       $ch = curl_init($url);
       curl_setopt($ch, \CURLOPT_RETURNTRANSFER, 1);
