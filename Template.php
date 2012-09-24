@@ -64,7 +64,7 @@ class Template {
    * @param array optional array of variables to extract() before template is require'd
    * @param boolean cache template contents?
    */
-  public function __construct ($template = null, array $context = array())
+  public function __construct ($template = null, $context = array())
   {
     $this->_templateDir = \LIBDIR . 'templates';
     if ($template)
@@ -113,10 +113,19 @@ class Template {
 
   /**
    * Set the whole context array at once. Overwrites any existing values.
+   *
+   * If given an instance of Template, will copy that template's entire
+   * context.
+   *
+   * @return $this
    */
-  public function setContext (array $context = array())
+  public function setContext ($context = array())
   {
-    return $this->_context = $context;
+    if (is_array($context))
+      $this->_context = $context;
+    elseif ($context instanceof Template)
+      $this->_context = $context->getContext();
+    return $this;
   }
 
   /**
