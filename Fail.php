@@ -36,6 +36,11 @@ class Fail {
   public static $errorLogAll = false;
 
   /**
+   * Include user agent with fail logging?
+   */
+  public static $logUserAgent = false;
+
+  /**
    * Log to a specific file via file_put_contents() instead of using
    * error_log().
    */
@@ -124,7 +129,7 @@ class Fail {
       \BlodeEvent::err($message_text);
     }
 
-    if (isset($_SERVER['HTTP_USER_AGENT']))
+    if (static::$logUserAgent && isset($_SERVER['HTTP_USER_AGENT']))
       $message_text .= ' [' . $_SERVER['HTTP_USER_AGENT'] . ']';
 
     $message_text .= "\n";

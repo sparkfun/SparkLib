@@ -1,6 +1,8 @@
 <?php
 namespace SparkLib\SocialNoise;
 
+use \SparkLib\Fail;
+
 /**
  * This is based on:
  *
@@ -29,6 +31,8 @@ namespace SparkLib\SocialNoise;
  */
 class Twitter extends \SparkLib\SocialNoise {
 
+  public static $tableClass = '';
+
   /**
    * Return search results formatted as HTML.
    */
@@ -36,6 +40,9 @@ class Twitter extends \SparkLib\SocialNoise {
   {
     $url = 'https://search.twitter.com/search.json?q=' . rawurlencode($text);
     $searchResults = static::getSearchFromJson($url);
+
+    if (! $searchResults)
+      return '<p>Search failure.</p>';
 
     // Set up our string format templates
     $img       = '<img src="%s" height=48 width=48/>';
@@ -63,23 +70,21 @@ class Twitter extends \SparkLib\SocialNoise {
 
       // Take the profile image, the from user and the created date,
       // throw some HTML blobs around them:
-      $feed .= '<div style="padding: 5px 5px 5px 5px; width: 400px; border-bottom:1px dashed #CCCCCC; clear: left;">'
-             . '<div style="padding: 0px 5px 0px 5px; float: left;">'
-             . sprintf($img, $image_url)
-             . '</div>'
-             . '<div style="padding: 0 5 0 5; display: block;">'
-             . sprintf($fromUser, $result->from_user, $result->from_user)
+      $feed .= '<tr>'
+             . '<td>' . sprintf($img, $image_url) . '</td>'
+             . '<td>' . sprintf($fromUser, $result->from_user, $result->from_user)
              . $twitterText
              . '<br><small><i><a href="http://twitter.com/#!/' . $result->from_user . '/status/' . $result->id_str . '">' . $result->created_at . '</a></i></small>'
-             . '</div>'
-             . '</div>';
+             . '</td>'
+             . '</tr>';
 
       if ($foundQty >= $qty) {
         break;
       }
     }
 
-    return $feed;
+    $class = htmlspecialchars(static::$tableClass);
+    return "<table class=\"{$class}\">$feed</table>";
   }
 
 }
