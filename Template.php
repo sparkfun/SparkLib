@@ -129,6 +129,18 @@ class Template {
   }
 
   /**
+   * Add a set of values to existing context. Overwrites existing values
+   * if the given ones happen to overlap, leaves existing ones in place.
+   */
+  public function addContext ($context = array())
+  {
+    foreach ($context as $key => $val) {
+      $this->__set($key, $val);
+    }
+    return $this;
+  }
+
+  /**
    * Return a copy of the entire context array.
    */
   public function getContext ()
