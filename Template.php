@@ -134,6 +134,9 @@ class Template {
    */
   public function addContext ($context = array())
   {
+    if ($context instanceof Template)
+      $context = $template->getContext();
+
     foreach ($context as $key => $val) {
       $this->__set($key, $val);
     }
