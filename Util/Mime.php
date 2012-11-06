@@ -16,6 +16,7 @@ class Mime {
     'image/jpeg' => 'jpg',
     'image/png'  => 'png',
     'image/tiff' => 'tiff',
+    'image/gif'  => 'gif',
 
     // pdf
     'applications/vnd.pdf'  => 'pdf',
