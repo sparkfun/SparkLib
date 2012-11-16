@@ -87,7 +87,9 @@ class Autoloader {
     else {
       // TODO: All these strpos() calls are probably expensive.
       foreach (static::$searchPaths as $substr => $dir) {
-        if (false !== strpos($class, $substr)) {
+        // we first check for a \, which indicates a namespace
+        // - those we want to skip
+        if ((false === strpos($class, '\\')) && (false !== strpos($class, $substr))) {
           $path = $dir . $class . '.php';
           break;
         }
