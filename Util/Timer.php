@@ -23,7 +23,7 @@ class Timer {
     $time = microtime();
     $time = explode(' ', $time);
 
-    return round(($time[1] + $time[0]) - $this->_startTime, 2);
+    return ($time[1] + $time[0]) - $this->_startTime;
   }
 
 }
