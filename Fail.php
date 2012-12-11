@@ -28,7 +28,7 @@ class Fail {
   /**
    * Image to display with public errors.
    */
-  public static $img_url = 'http://dlnmh9ip6v2uc.cloudfront.net/images/sparkfail.png';
+  public static $img_url = 'https://dlnmh9ip6v2uc.cloudfront.net/images/sparkfail.png';
 
   /**
    * Send all errors straight to the log?
