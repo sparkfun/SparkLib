@@ -74,6 +74,17 @@ class Fail {
   );
 
   /**
+   * List errors which should be promoted to exceptions.
+   *
+   * Something like:
+   *
+   * <code>
+   * \SparkLib\Fail::$exceptionOnErrors = array(E_RECOVERABLE_ERROR => true);
+   * </code>
+   */
+  public static $exceptionOnErrors = array();
+
+  /**
    * Set up error & exception handling, logging, etc.
    *
    * @param $public boolean are we operating in public?
@@ -155,8 +166,7 @@ class Fail {
     // Filter out low-urgency stuff we don't care about right now:
     // XXX: Get rid of SFE-specific stuff here.
     if ($errno === \E_NOTICE) {
-      if (stristr($errstr, 'undefined index'))  return;
-      if (strstr($errfile, 'Test.php'))         return;
+      if (stristr($errstr, 'undefined index')) return;
     }
     if ($errno === \E_DEPRECATED) {
       if (strstr($errfile, 'Barcode.php')) return;
@@ -166,7 +176,7 @@ class Fail {
       if (strstr($errfile, 'Code39.php')) return;
     }
 
-    $errorType = self::$errorList[(int)$errno];
+    $errorType = static::$errorList[(int)$errno];
 
     self::log("{$errorType} - $errfile:$errline - $errstr\n");
 
@@ -176,6 +186,12 @@ class Fail {
       array_shift($trace);
 
       self::log(static::compile_backtrace($trace));
+    }
+
+    if (isset(static::$exceptionOnErrors[ $errno ])) {
+      // these get thrown on type errors and possibly elsewhere - let's
+      // see what happens if we make sure they're fatal
+      throw new \ErrorException($errstr, $errno, 0, $errfile, $errline);
     }
   }
 
