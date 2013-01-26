@@ -47,6 +47,11 @@ class Fail {
   public static $logFile = null;
 
   /**
+   * Log only strings matching this regex.
+   */
+  public static $grep = null;
+
+  /**
    * Break out backtraces for php E_ errors/warning/notices/whatever
    */
   public static $doBacktraces = false;
@@ -135,13 +140,19 @@ class Fail {
       $message_text = $message;
     }
 
+    // if we're grepping for something specific, make sure this message matches:
+    if (isset(static::$grep) && (! preg_match(static::$grep, $message_text))) {
+      return;
+    }
+
     // If blode is sitting around, send it our message.
     if (class_exists('\BlodeEvent')) {
       \BlodeEvent::err($message_text);
     }
 
-    if (static::$logUserAgent && isset($_SERVER['HTTP_USER_AGENT']))
+    if (static::$logUserAgent && isset($_SERVER['HTTP_USER_AGENT'])) {
       $message_text .= ' [' . $_SERVER['HTTP_USER_AGENT'] . ']';
+    }
 
     $message_text .= "\n";
 
@@ -221,8 +232,9 @@ class Fail {
    */
   public static function render ()
   {
-    if (self::noFail())
+    if (self::noFail()) {
       return 'No known failures.';
+    }
     return self::$failText . "\n  " . self::$failCount . ' failures';
   }
 
@@ -309,8 +321,9 @@ class Fail {
     // Did we actually get any failures?         \
     //                                            --> skip it
     //  Are we supposed to just use error_log()? /
-    if (self::noFail() || self::$errorLogAll)
+    if (self::noFail() || self::$errorLogAll) {
       return;
+    }
 
     $img_url = static::$img_url;
 
