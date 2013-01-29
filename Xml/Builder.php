@@ -6,19 +6,44 @@ use \SparkLib\Fail;
 /* because DOMDocument sucks */
 class XmlBuilder {
   public $document = array();
-
-  public function _child(){
-    return new static;
-  }
+  public $namespace = '';
 
   public function _attribs( $attributes ){
-    $node = end($this->document);
-    $node->attributes = $attributes;
+    $this->_last_node()->attributes = $attributes;
 
     return $this;
   }
 
+  public function _child(){
+    $x = new static;
+    $x->_namespace($this->namespace);
+    return $x;
+  }
+
+  public function _children( $kids ){
+    $node = $this->_last_node();
+    foreach ($kids->document as $child_node)
+      $node->children[] = $child_node;
+  }
+
+  public function _last_node(){
+    $node = end($this->document);
+
+    if ($node === false)
+      throw new \LogicException('Unable to set attributes for nonexistant previous node');
+
+    return $node;
+  }
+
+  public function _namespace($namespace){
+    $this->namespace = $namespace;
+    return $this;
+  }
+
   public function _node($name, $value = '', $attributes = array(), $children = array()){
+    if (strlen($this->namespace) > 0)
+      $name = "{$this->namespace}:{$name}";
+
     $this->document[] = new XmlNode($name, $value, $attributes, $children);
     return $this;
   }
@@ -29,6 +54,11 @@ class XmlBuilder {
   }
 
   public function __call($name, $arguments){
+    if (count($arguments) <= 0) {
+      $this->_node($name);
+      return $this;
+    }
+
     $first = $arguments[0];
     if ($first instanceof static)
       $this->_node($name, '', array(), $first->document);
