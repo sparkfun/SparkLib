@@ -1,33 +1,63 @@
 <?php
 namespace Spark;
 
-use \SparkLib\Fail;
+use \SparkLib\Fail,
+    \DOMDocument,
+    \DOMElement;
+
 
 /* because DOMDocument sucks */
 class XmlBuilder {
-  public $document = array();
-  public $namespace = '';
+  private $domdoc;
+  private $namespace = '';
+  private $namespace_url = '';
+
+  private $last_node = false;
+
+  public function __construct(){
+    $this->domdoc = new DOMDocument();
+  }
 
   public function _attribs( $attributes ){
-    $this->_last_node()->attributes = $attributes;
+    foreach ($attributes as $name => $value)
+      $this->_last_node()->setAttribute($name, $value);
 
     return $this;
   }
 
   public function _child(){
     $x = new static;
-    $x->_namespace($this->namespace);
+    $x->_namespace($this->namespace, $this->namespace_url);
     return $x;
   }
 
-  public function _children( $kids ){
+  public function _children( $document ){
+    if ($document == null)
+      return $this;
+
     $node = $this->_last_node();
-    foreach ($kids->document as $child_node)
-      $node->children[] = $child_node;
+
+    if ($document instanceof DOMDocument)
+      $kids = $document;
+    elseif ($document instanceof static)
+      $kids = $document->domdoc;
+    else
+      throw new InvalidArgumentException(' _children only knows how to import children from a DOMDocument or a Spark\XmlBuilder.');
+
+    if (count($kids) == 0)
+      return $this;
+
+    foreach ($kids->childNodes as $kid) {
+      $node->appendChild(
+        $this->domdoc->importNode($kid, true)
+      );
+    }
+
+    return $this;
   }
 
   public function _last_node(){
-    $node = end($this->document);
+    $node = $this->last_node;
 
     if ($node === false)
       throw new \LogicException('Unable to set attributes for nonexistant previous node');
@@ -35,16 +65,26 @@ class XmlBuilder {
     return $node;
   }
 
-  public function _namespace($namespace){
+  public function _namespace($namespace, $url){
     $this->namespace = $namespace;
+    $this->namespace_url = $url;
     return $this;
   }
 
-  public function _node($name, $value = '', $attributes = array(), $children = array()){
+  public function _node($name, $value = '', $attributes = array(), $children = null){
     if (strlen($this->namespace) > 0)
-      $name = "{$this->namespace}:{$name}";
+      $node = new DOMElement("{$this->namespace}:{$name}", '', $this->namespace_url);
+    else
+      $node = new DOMElement($name);
 
-    $this->document[] = new XmlNode($name, $value, $attributes, $children);
+    $node->nodeValue = $value;
+    $this->last_node = $node;
+
+    $this->domdoc->appendChild($node);
+
+    $this->_attribs($attributes);
+    $this->_children($children);
+
     return $this;
   }
 
@@ -60,59 +100,25 @@ class XmlBuilder {
     }
 
     $first = $arguments[0];
-    if ($first instanceof static)
-      $this->_node($name, '', array(), $first->document);
+    if ($first instanceof static || $first instanceof DOMDocument)
+      $this->_node($name, '', array(), $first->domdoc);
     else
       $this->_node($name, $first);
     return $this;
   }
 
-  public function _print(){
-    foreach ($this->document as $node)
-      print $node;
-  }
-}
-
-class XmlNode {
-  public $name;
-  public $value;
-  public $attributes;
-  public $children;
-
-  public function __construct($name, $value = '', $attributes = array(), $children = array()){
-    $this->name = $name;
-    $this->value = $value;
-    $this->attributes = $attributes;
-    $this->children = $children;
+  public function _domdoc(){
+    return $this->domdoc;
   }
 
-  public function __toString(){
-    $quick_end = true;
+  public function _string($html = false){
+    if ($html)
+      return $this->domdoc->saveHTML();
+    else
+      return $this->domdoc->saveXML();
+  }
 
-    $s = "<{$this->name}";
-    $guts = '';
-
-    foreach ($this->attributes as $k => $v)
-      $s .= " {$k}=\"{$v}\"";
-
-    if ( $this->value !== '' ) {
-      $quick_end = false;
-      $guts .= $this->value;
-    }
-
-    if (count($this->children) > 0) {
-      $quick_end = false;
-
-      foreach ($this->children as $child)
-        $guts .= $child->__toString();
-    }
-
-    if ($quick_end) {
-      $s .= " />";
-    } else {
-      $s .= ">{$guts}</{$this->name}>";
-    }
-
-    return $s;
+  public function _print( $html = false ){
+    print $this->_string($html);
   }
 }
