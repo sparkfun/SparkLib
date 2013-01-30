@@ -6,7 +6,85 @@ use \SparkLib\Fail,
     \DOMElement;
 
 
-/* because DOMDocument sucks */
+/** because DOMDocument sucks
+ *
+ * XmlBuilder is a wrapper for DOMDocument's creation interface.
+ *
+ * When using php's DOM library you are required to manually create a
+ * series of DOMInterface and DOMDocument and DOMAttribute and and and
+ * and and ...
+ *
+ * With Spark\XmlBuilder, you can instead just build out a series of
+ * nested nodes using a simplified method chaining syntax similar to
+ * XML builder clasess available elsewhere.
+ *
+ * Spark\XmlBuilder uses a subset of php's DOM functions so that
+ * the restrictions imposed by standard practice aren't enforced by
+ * the builder or DOM class.
+ *
+ * General usage:
+ *    $b = new \Spark\XmlBuilder();
+ *
+ *    - Create elements using the object operator:
+ *      $b->Name('Rob')
+ *        ->Age('34')
+ *        ->Weight('185')
+ *
+ *      to produce:
+ *        <Name>Rob</Name>
+ *        <Age>34</Age>
+ *        <Weight>185</Weight>
+ *
+ *    - Add attributes to previous node using ->_attribs :
+ *      $b->Person
+ *        ->_attribs( array(
+ *          'age' => 34,
+ *          'weight' => 185,
+ *        ))
+ *
+ *      to produce:
+ *        <Person age="34" weight="185"></Person>
+ *
+ *    - Build out an independent or nested set of nodes using ->_child()
+ *      and add them as children of a node :
+ *      $people = $b->_child();
+ *      foreach (array('Rob','Casey','Brennen','Dave') as $name)
+ *        $people->$name;
+ *      $b->People($people);
+ *
+ *      to produce[1]:
+ *        <People>
+ *          <Rob></Rob>
+ *          <Casey></Casey>
+ *          <Brennen></Brennen>
+ *          <Dave></Dave>
+ *        </People>
+ *
+ *    - Add children to previous node using ->_children :
+ *      $b->People;
+ *      foreach (array('Rob','Casey','Brennen','Dave') as $name)
+ *        $b->_children( $b->_child()->$name );
+ *
+ *      to produce:
+ *        <People>
+ *          <Rob></Rob>
+ *          <Casey></Casey>
+ *          <Brennen></Brennen>
+ *          <Dave></Dave>
+ *        </People>
+ *
+ *    - Fetch a string representation of the document :
+ *      print $b->People->Places->Things->_string( $want_html );
+ *
+ *    - Fetch the DOMDocument object for beating with hammers :
+ *      $b->Youll->Hate->Yourself->_domodc();
+ *
+ *
+ * Notes:
+ * 1: Thankfully, DOMDocument doesn't know how to create singleton tags,
+ *    so it just creates empty tag pairs: <br></br>.  D:
+ */
+
 class XmlBuilder {
   private $domdoc;
   private $namespace = '';
