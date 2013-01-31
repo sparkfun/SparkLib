@@ -1,29 +1,27 @@
 <?php
-namespace Spark;
+namespace SparkLib\Xml;
 
-use \SparkLib\Fail,
-    \DOMDocument,
-    \DOMElement;
+use \DOMDocument, \DOMElement;
 
 
 /** because DOMDocument sucks
  *
- * XmlBuilder is a wrapper for DOMDocument's creation interface.
+ * Builder is a wrapper for DOMDocument's creation interface.
  *
  * When using php's DOM library you are required to manually create a
  * series of DOMInterface and DOMDocument and DOMAttribute and and and
  * and and ...
  *
- * With Spark\XmlBuilder, you can instead just build out a series of
+ * With SparkLib\Xml\Builder, you can instead just build out a series of
  * nested nodes using a simplified method chaining syntax similar to
  * XML builder clasess available elsewhere.
  *
- * Spark\XmlBuilder uses a subset of php's DOM functions so that
+ * SparkLib\Xml\Builder uses a subset of php's DOM functions so that
  * the restrictions imposed by standard practice aren't enforced by
  * the builder or DOM class.
  *
  * General usage:
- *    $b = new \Spark\XmlBuilder();
+ *    $b = new \SparkLib\Xml\Builder();
  *
  *    - Create elements using the object operator:
  *      $b->Name('Rob')
@@ -85,7 +83,7 @@ use \SparkLib\Fail,
  *    so it just creates empty tag pairs: <br></br>.  D:
  */
 
-class XmlBuilder {
+class Builder {
   private $domdoc;
   private $namespace = '';
   private $namespace_url = '';
@@ -120,7 +118,7 @@ class XmlBuilder {
     elseif ($document instanceof static)
       $kids = $document->domdoc;
     else
-      throw new InvalidArgumentException(' _children only knows how to import children from a DOMDocument or a Spark\XmlBuilder.');
+      throw new InvalidArgumentException(' _children only knows how to import children from a DOMDocument or a SparkLib\Xml\Builder.');
 
     if (count($kids) == 0)
       return $this;
