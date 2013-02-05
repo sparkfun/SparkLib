@@ -33,9 +33,9 @@ use \DOMDocument, \DOMElement;
  *        <Age>34</Age>
  *        <Weight>185</Weight>
  *
- *    - Add attributes to previous node using ->_attribs :
+ *    - Add attributes to previous node using ->attribs :
  *      $b->Person
- *        ->_attribs( array(
+ *        ->attribs( array(
  *          'age' => 34,
  *          'weight' => 185,
  *        ))
@@ -43,9 +43,9 @@ use \DOMDocument, \DOMElement;
  *      to produce:
  *        <Person age="34" weight="185"></Person>
  *
- *    - Build out an independent or nested set of nodes using ->_child()
+ *    - Build out an independent or nested set of nodes using ->child()
  *      and add them as children of a node :
- *      $people = $b->_child();
+ *      $people = $b->child();
  *      foreach (array('Rob','Casey','Brennen','Dave') as $name)
  *        $people->$name;
  *      $b->People($people);
@@ -58,10 +58,10 @@ use \DOMDocument, \DOMElement;
  *          <Dave></Dave>
  *        </People>
  *
- *    - Add children to previous node using ->_children :
+ *    - Add children to previous node using ->nest :
  *      $b->People;
  *      foreach (array('Rob','Casey','Brennen','Dave') as $name)
- *        $b->_children( $b->_child()->$name );
+ *        $b->nest( $b->child()->$name );
  *
  *      to produce:
  *        <People>
@@ -72,10 +72,10 @@ use \DOMDocument, \DOMElement;
  *        </People>
  *
  *    - Fetch a string representation of the document :
- *      print $b->People->Places->Things->_string( $want_html );
+ *      print $b->People->Places->Things->string( $want_html );
  *
  *    - Fetch the DOMDocument object for beating with hammers :
- *      $b->Youll->Hate->Yourself->_domodc();
+ *      $b->Youll->Hate->Yourself->domodc();
  *
  *
  * Notes:
@@ -94,31 +94,30 @@ class Builder {
     $this->domdoc = new DOMDocument();
   }
 
-  public function _attribs( $attributes ){
+  public function attribs( $attributes ){
     foreach ($attributes as $name => $value)
-      $this->_last_node()->setAttribute($name, $value);
-
+      $this->last_node()->setAttribute($name, $value);
     return $this;
   }
 
-  public function _child(){
+  public function child(){
     $x = new static;
-    $x->_namespace($this->namespace, $this->namespace_url);
+    $x->xmlns($this->namespace, $this->namespace_url);
     return $x;
   }
 
-  public function _children( $document ){
+  public function nest($document){
     if ($document == null)
       return $this;
 
-    $node = $this->_last_node();
+    $node = $this->last_node();
 
     if ($document instanceof DOMDocument)
       $kids = $document;
     elseif ($document instanceof static)
       $kids = $document->domdoc;
     else
-      throw new InvalidArgumentException(' _children only knows how to import children from a DOMDocument or a SparkLib\Xml\Builder.');
+      throw new InvalidArgumentException(' nest only knows how to import children from a DOMDocument or a SparkLib\Xml\Builder.');
 
     if (count($kids) == 0)
       return $this;
@@ -132,7 +131,7 @@ class Builder {
     return $this;
   }
 
-  public function _last_node(){
+  public function last_node(){
     $node = $this->last_node;
 
     if ($node === false)
@@ -141,13 +140,13 @@ class Builder {
     return $node;
   }
 
-  public function _namespace($namespace, $url){
+  public function xmlns($namespace, $url){
     $this->namespace = $namespace;
     $this->namespace_url = $url;
     return $this;
   }
 
-  public function _node($name, $value = '', $attributes = array(), $children = null){
+  public function node($name, $value = '', $attributes = array(), $children = null){
     if (strlen($this->namespace) > 0)
       $node = new DOMElement("{$this->namespace}:{$name}", '', $this->namespace_url);
     else
@@ -158,43 +157,41 @@ class Builder {
 
     $this->domdoc->appendChild($node);
 
-    $this->_attribs($attributes);
-    $this->_children($children);
+    $this->attribs($attributes);
+    $this->nest($children);
 
     return $this;
   }
 
   public function __get($name){
-    $this->_node($name);
+    $this->node($name);
     return $this;
   }
 
   public function __call($name, $arguments){
     if (count($arguments) <= 0) {
-      $this->_node($name);
+      $this->node($name);
       return $this;
     }
 
     $first = $arguments[0];
-    if ($first instanceof static || $first instanceof DOMDocument)
-      $this->_node($name, '', array(), $first->domdoc);
+    if ($first instanceof static)
+      $this->node($name, '', array(), $first->domdoc);
+    elseif ($first instanceof DOMDocument)
+      $this->node($name, '', array(), $first);
     else
-      $this->_node($name, $first);
+      $this->node($name, $first);
     return $this;
   }
 
-  public function _domdoc(){
+  public function domdoc(){
     return $this->domdoc;
   }
 
-  public function _string($html = false){
+  public function string($html = false){
     if ($html)
       return $this->domdoc->saveHTML();
     else
       return $this->domdoc->saveXML();
-  }
-
-  public function _print( $html = false ){
-    print $this->_string($html);
   }
 }
