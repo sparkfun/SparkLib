@@ -91,7 +91,7 @@ class Builder {
   private $last_node = false;
 
   public function __construct(){
-    $this->domdoc = new DOMDocument();
+    $this->domdoc = new DOMDocument('1.0');
   }
 
   public function attribs( $attributes ){
