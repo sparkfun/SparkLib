@@ -9,25 +9,35 @@ class Account extends Endicia{
   public $balance = null;
   public $active  = null;
 
-  public function getAccountStatus(){
+  public function fetchAccountStatus(){
     $this->request_type = 'GetAccountStatusXML';
     $this->post_prefix  = 'accountStatusRequestXML';
     $this->xml          = $this->accountStatusRequestXML();
     $this->request();
-    $this->parse_response();
 
-    $balance = $this->sxml->CertifiedIntermediary->PostageBalance;
+    $this->parse_response();
+    $this->check_status();
+
+    if ( ! $this->valid_response)
+      return false;
+
     $status = $this->sxml->CertifiedIntermediary->AccountStatus;
 
+    if ($status === NULL)
+      throw new \RuntimeException("Could not parse AccountStatus from response XML.");
+    else
+      $this->active = 'A' == (string) $status;
+
+    if ( ! $this->active)
+      return;
+
+    $balance = $this->sxml->CertifiedIntermediary->PostageBalance;
     if ($balance === NULL)
-      ;// ???
+      throw new \RuntimeException("Could not parse PostageBalance from response XML.");
     else
       $this->balance = (float) $balance;
 
-    if ($status === NULL)
-      ;
-    else
-      $this->active = 'A' == (string) $status;
+    return true;
   }
 
   public function accountStatusRequestXML(){

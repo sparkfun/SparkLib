@@ -11,7 +11,8 @@ class Endicia {
   public $password;
   public $test;
 
-  public $request_type, $post_prefix, $xml, $response, $sxml;
+  public $request_type, $post_prefix, $xml;
+  public $valid_response, $message, $response, $sxml;
 
   public $curl_info;
 
@@ -29,7 +30,7 @@ class Endicia {
     $this->password = \ENDICIA_PASSWORD;
   }
 
-  protected function request() {
+  public function request() {
     $url = $this->base_url . $this->request_type;
 
     $post_body = $this->post_prefix . "=" . $this->xml;
@@ -55,8 +56,51 @@ class Endicia {
     return $this->response;
   }
 
-  protected function parse_response(){
+  public function parse_response(){
+    if ($this->response === null)
+      throw new \LogicException('Cannot parse, no valid response.');
+
+    if ($this->curl_info === null)
+      throw new \LogicException('Cannot check curl status, no valid info hash.');
+
+    if ( $this->curl_info['http_code'] !== 200 ) {
+      $this->valid_response  = false;
+      $this->message = "HTTP status was {$this->curl_info['http_code']}, expected 200";
+      throw new \RuntimeException( $this->message );
+      return false;
+    }
+
     libxml_use_internal_errors(true);
     $this->sxml = simplexml_load_string( $this->response );
+
+    // TODO: parse out sxml errors
+    $this->valid_response = true;
+
+    return true;
+  }
+
+  public function check_status(){
+    if ($this->sxml === null)
+      throw new \LogicException("Cannot check response status without a parsed response");
+    if ( ! $this->valid_response)
+      throw new \LogicException("Cannot check response status for invalid response. Status message: {$this->message}.");
+
+    $status = $this->sxml->Status;
+    $message = $this->sxml->ErrorMessage;
+
+    if ($status == NULL) {
+      $this->valid_response = false;
+      $this->message = "Could not retrieve request status from response document.";
+      return false;
+    }
+
+    if ($status != 0) {
+      $this->valid_response = false;
+      $this->message = "Endicia returned error: $message";
+      throw new \RuntimeException( $this->message );
+      return false;
+    }
+
+    return true;
   }
 }
