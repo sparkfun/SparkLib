@@ -11,7 +11,7 @@ class Endicia {
   public $password;
   public $test;
 
-  public $request_type, $post_prefix, $xml, $response;
+  public $request_type, $post_prefix, $xml, $response, $sxml;
 
   public $curl_info;
 
@@ -53,5 +53,10 @@ class Endicia {
 
     curl_close($ch);
     return $this->response;
+  }
+
+  protected function parse_response(){
+    libxml_use_internal_errors(true);
+    $this->sxml = simplexml_load_string( $this->response );
   }
 }

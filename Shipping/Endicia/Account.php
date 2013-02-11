@@ -6,19 +6,28 @@ use SparkLib\Xml\Builder;
 use \SimpleXMLElement;
 
 class Account extends Endicia{
-  public $postage_balance = null;
-  public $account_status = null;
+  public $balance = null;
+  public $active  = null;
 
   public function getAccountStatus(){
     $this->request_type = 'GetAccountStatusXML';
     $this->post_prefix  = 'accountStatusRequestXML';
     $this->xml          = $this->accountStatusRequestXML();
     $this->request();
+    $this->parse_response();
 
-    print_r($this->response);
+    $balance = $this->sxml->CertifiedIntermediary->PostageBalance;
+    $status = $this->sxml->CertifiedIntermediary->AccountStatus;
 
-    $resp = new SimpleXMLElement( $this->response );
-    print $resp->AccountStatusResponse->CertifiedIntermediary->PostageBalance;
+    if ($balance === NULL)
+      ;// ???
+    else
+      $this->balance = (float) $balance;
+
+    if ($status === NULL)
+      ;
+    else
+      $this->active = 'A' == (string) $status;
   }
 
   public function accountStatusRequestXML(){
