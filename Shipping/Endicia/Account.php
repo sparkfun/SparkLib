@@ -1,7 +1,7 @@
 <?php
-namespace Spark\Shipper\Endicia;
+namespace SparkLib\Shipping\Endicia;
 
-use \Spark\Shipper\Endicia;
+use SparkLib\Shipping\Endicia;
 use SparkLib\Xml\Builder;
 use \SimpleXMLElement;
 

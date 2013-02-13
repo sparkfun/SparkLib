@@ -1,6 +1,6 @@
 <?php
 
-namespace Spark\Shipper;
+namespace SparkLib\Shipper;
 
 use SparkLib\Xml\Builder as Builder;
 
