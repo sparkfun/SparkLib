@@ -103,4 +103,17 @@ class Endicia {
 
     return true;
   }
+
+  protected function authXML( $b ){
+    return
+      $b->child()
+        ->RequesterID( $this->requester_id )
+        ->RequestID('12345')
+        ->CertifiedIntermediary(
+            $b->child()
+              ->AccountID( $this->account_number )
+              ->PassPhrase( $this->password )
+        );
+
+  }
 }
