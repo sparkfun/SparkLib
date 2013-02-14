@@ -9,6 +9,9 @@ class Account extends Endicia{
   public $balance = null;
   public $active  = null;
 
+  const MINIMUM_CREDIT_REQUEST = 10;
+  const MAXIMUM_CREDIT_REQUEST = 99999;
+
   public function fetchAccountStatus(){
     $this->request_type = 'GetAccountStatusXML';
     $this->post_prefix  = 'accountStatusRequestXML';
@@ -91,14 +94,17 @@ class Account extends Endicia{
     if (! $this->valid_response)
       return false;
 
-    $state = $this->pullAccountStatus();
-    var_dump($state);
-    return $state;
+    // print_r($this->response);
+
+    // TODO Come back for this when endicia responds to the email with something helpful
+    // $state = $this->pullAccountStatus();
+    // return $state;
+    return true;
   }
 
   public function buyPostageXML($amount = 1500){
-    if ( $amount < 10 || $amount > 99999 )
-      throw new \RuntimeException("Postage purchase must be 10 < x < 10000.");
+    if ( $amount < static::MINIMUM_CREDIT_REQUEST || $amount > static::MAXIMUM_CREDIT_REQUEST )
+      throw new \RuntimeException("Postage purchase must be " . static::MINIMUM_CREDIT_REQUEST . " < x < " . static::MAXIMUM_CREDIT_REQUEST . ".");
 
     $b = new Builder();
     $b->RecreditRequest
@@ -108,5 +114,24 @@ class Account extends Endicia{
       );
 
     return $b->string(true);
+  }
+
+  public function ensureAccountBalance($minimum = 100){
+    $this->fetchAccountStatus();
+
+    if ($this->balance < $minimum || $this->balance > 1000000000){
+      $amount_needed = $minimum - $this->balance;
+
+      if ($amount_needed < static::MINIMUM_CREDIT_REQUEST)
+        $amount_needed = static::MINIMUM_CREDIT_REQUEST;
+
+      if ($amount_needed > static::MAXIMUM_CREDIT_REQUEST)
+        $amount_needed = static::MAXIMUM_CREDIT_REQUEST;
+
+      $this->buyPostage( $amount_needed );
+      return true;
+    }
+
+    return false;
   }
 }
