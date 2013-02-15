@@ -16,8 +16,11 @@ class Endicia {
 
   public $curl_info;
 
+  public $sender_address;
+
   public function __construct($test_mode = false){
     $this->test = $test_mode;
+    //TODO arrange some mechanism by which these variables can be passed in.
     $this->base_url = \ENDICIA_LABEL_SERVER;
     $this->requester_id = \ENDICIA_REQUESTER_ID;
     $this->account_number = \ENDICIA_ACCOUNT_NUMBER;
@@ -116,4 +119,5 @@ class Endicia {
         );
 
   }
+
 }

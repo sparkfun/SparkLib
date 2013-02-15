@@ -119,7 +119,7 @@ class Account extends Endicia{
   public function ensureAccountBalance($minimum = 100){
     $this->fetchAccountStatus();
 
-    if ($this->balance < $minimum || $this->balance > 1000000000){
+    if ($this->balance < $minimum){
       $amount_needed = $minimum - $this->balance;
 
       if ($amount_needed < static::MINIMUM_CREDIT_REQUEST)
