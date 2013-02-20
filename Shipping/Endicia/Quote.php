@@ -49,12 +49,13 @@ class Quote extends Endicia {
         ->MailClass( $international ? 'International' : 'Domestic' )
         ->WeightOz( $weight )
         ->MailpieceShape('Parcel')
-        // ->MailpieceDimensions
-        //   ->nest( $b->child()
-        //     ->Length( $dimmensions[0] )
-        //     ->Width(  $dimmensions[2] )
-        //     ->Height( $dimmensions[1] )
-        //   )
+         ->MailpieceDimensions
+           ->nest( $b->child()
+             // Undocumented: Endicia can't handle dimensions with more than 3 decimal places. :|
+             ->Length( number_format( $dimmensions[0], 3) )
+             ->Width(  number_format( $dimmensions[2], 3) )
+             ->Height( number_format( $dimmensions[1], 3) )
+           )
         ->FromPostalCode( $from->entry_postcode )
         ->ToPostalCode( $postal_code )
         ->ToCountryCode( $to->Country->countries_iso_code_2 )
