@@ -6,9 +6,43 @@ use SparkLib\Shipping\Endicia,
 
 use SparkLib\Xml\Builder;
 
+/**
+ * Class to provide quoting from Endicia.
+ *
+ * Set yourself up like this:
+ *
+ * $quoter = new Quote;
+ * $quoter->from_address = Address $from_address;             //see SparkLib\Shipping\Address
+ * $quoter->to_address   = Address $to_address;
+ * $quoter->dimensions  = array( $length, $width, $height ); //decimals, in inches. rounded to 3 decimal places.
+ * $quoter->weight       = $weight;                           //decimals, in ounces
+ *
+ * Then pull one of these:
+ *
+ * $rates = $quoter->quote();
+ *
+ * And you'll find your quotes to be similar like this:
+ *
+ * $rates = Array(
+ *            [0] => Array(
+ *                    [MailClass] => First
+ *                    [MailService] => First-Class Mail
+ *                    [Postage] => 1.69
+ *                )
+ *            [1] => Array( ... )
+ *            ...
+ *          )
+ *
+ * @author robacarp <robert.carpenter@sparkfun.com>
+ */
 class Quote extends Endicia {
   public $to_address, $from_address, $dimensions, $weight;
 
+  /**
+   * Run a quote query to the endicia servers.
+   *
+   * @return array shipping quotes
+   */
   public function quote(){
     if ( ! $this->from_address instanceof Address)
       throw new \LogicException("From address must be a SparkLib\Shipping\Address. Set Quote#from_address before fetching quotes");
@@ -32,6 +66,18 @@ class Quote extends Endicia {
     return $this->rates;
   }
 
+  /**
+   * Build out the XML required to quote a delivery.
+   *
+   * Broken out into its own method so that xml can be easily emailed to Endicia when
+   * they break something we do.
+   *
+   * @param Address $from the starting address
+   * @param Address $to   the destination address
+   * @param array   $dimensions array($length, $width, $height) of the package
+   *
+   * @return string xml to be sent to Endicia servers
+   */
   public function fetchQuoteXML(Address $from, Address $to, array $dimensions, $weight){
     $international = ! $to->domestic;
 
@@ -62,6 +108,11 @@ class Quote extends Endicia {
   }
 
 
+  /**
+   * Parses the response Endicia servers send and builds out a list of quotes.
+   *
+   * @return array quote data
+   */
   public function buildQuotes(){
     if ($this->response === null || $this->sxml === null)
       throw new \LogicException('buildQuote requires a parsed quote response before quotes can be assembled');
