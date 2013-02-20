@@ -35,7 +35,7 @@ use SparkLib\Xml\Builder;
  *
  * @author robacarp <robert.carpenter@sparkfun.com>
  */
-class Quote extends Endicia {
+class Quoter extends Endicia {
   public $to_address, $from_address, $dimensions, $weight;
 
   /**
