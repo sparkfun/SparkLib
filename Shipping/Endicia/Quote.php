@@ -1,27 +1,26 @@
 <?php
 namespace SparkLib\Shipping\Endicia;
 
-use SparkLib\Shipping\Endicia;
+use SparkLib\Shipping\Endicia,
+    SparkLib\Shipping\Address;
+
 use SparkLib\Xml\Builder;
-use \SimpleXMLElement,
-    \AddressBookSaurus,
-    \ShippingBoxSaurus;
 
 class Quote extends Endicia {
-  public $to_address, $from_address, $box, $weight;
+  public $to_address, $from_address, $dimensions, $weight;
 
   public function quote(){
-    if ($this->from_address === null)
-      throw new \LogicException('From address can\'t be null. Set Quote#from_address before fetching quotes');
-    if ($this->to_address === null)
-      throw new \LogicException('From address can\'t be null. Set Quote#to_address before fetching quotes');
-    if ($this->box === null)
-      throw new \LogicException('From address can\'t be null. Set Quote#box before fetching quotes');
+    if ( ! $this->from_address instanceof Address)
+      throw new \LogicException("From address must be a SparkLib\Shipping\Address. Set Quote#from_address before fetching quotes");
+    if ( ! $this->to_address instanceof Address)
+      throw new \LogicException("From address must be a SparkLib\Shipping\Address. Set Quote#to_address before fetching quotes");
+    if ($this->dimensions === null || ! is_array($this->dimensions) || count($this->dimensions) != 3)
+      throw new \LogicException('Dimensions must be set to 3 slot array before quoting');
 
 
     $this->request_type = 'CalculatePostageRatesXML';
     $this->post_prefix  = 'postageRatesRequestXML';
-    $this->xml          = $this->fetchQuoteXML($this->from_address, $this->to_address, $this->box, $this->weight);
+    $this->xml          = $this->fetchQuoteXML($this->from_address, $this->to_address, $this->dimensions, $this->weight);
 
     $this->request();
 
@@ -29,18 +28,16 @@ class Quote extends Endicia {
     $this->check_status();
 
     $this->buildQuotes();
-    print_r($this->rate_responses);
+
+    return $this->rates;
   }
 
-  public function fetchQuoteXML(AddressBookSaurus $from, AddressBookSaurus $to, ShippingBoxSaurus $box, $weight){
-    $international = ! $to->isDomestic();
-
-    // array(length, height, width)
-    $dimmensions = $box->outerDims('in');
+  public function fetchQuoteXML(Address $from, Address $to, array $dimensions, $weight){
+    $international = ! $to->domestic;
 
     // domestic postal codes can only be 5 digits
-    $postal_code = $international ? $to->entry_postcode
-                                  : substr($to->entry_postcode, 0, 5);
+    $postal_code = $international ? $to->postal_code
+                                  : substr($to->postal_code, 0, 5);
 
     $b = new Builder();
     $b->PostageRatesRequest
@@ -52,25 +49,26 @@ class Quote extends Endicia {
          ->MailpieceDimensions
            ->nest( $b->child()
              // Undocumented: Endicia can't handle dimensions with more than 3 decimal places. :|
-             ->Length( number_format( $dimmensions[0], 3) )
-             ->Width(  number_format( $dimmensions[2], 3) )
-             ->Height( number_format( $dimmensions[1], 3) )
+             ->Length( number_format( $dimensions[0], 3) )
+             ->Width(  number_format( $dimensions[1], 3) )
+             ->Height( number_format( $dimensions[2], 3) )
            )
-        ->FromPostalCode( $from->entry_postcode )
+        ->FromPostalCode( $from->postal_code )
         ->ToPostalCode( $postal_code )
-        ->ToCountryCode( $to->Country->countries_iso_code_2 )
+        ->ToCountryCode( $to->country )
       );
 
     return $b->string(true);
   }
 
+
   public function buildQuotes(){
     if ($this->response === null || $this->sxml === null)
       throw new \LogicException('buildQuote requires a parsed quote response before quotes can be assembled');
 
-    $this->rate_responses = array();
+    $this->rates = array();
     foreach ($this->sxml->PostagePrice as $rate_response) {
-      $this->rate_responses[] = array(
+      $this->rates[] = array(
         'MailClass'   => (string) $rate_response->MailClass,
         'MailService' => (string) $rate_response->Postage->MailService,
         'Postage'     => (float)  $rate_response['TotalAmount'],

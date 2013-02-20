@@ -5,7 +5,7 @@ namespace SparkLib\Shipping;
 use SparkLib\Xml\Builder as Builder;
 
 class Endicia {
-  public $base_url;
+  public $base_url = "https://www.envmgr.com/LabelService/EwsLabelService.asmx/";
   public $requester_id;
   public $account_number;
   public $password;
@@ -16,16 +16,17 @@ class Endicia {
 
   public $curl_info;
 
-  public $sender_address;
-
-  public function __construct(){
+  public function __construct( $requester_id, $account_number, $password, $test_mode ){
+    $this->requester_id = $requester_id;
+    $this->account_number = $account_number;
+    $this->password = $password;
+    $this->test = $test_mode;
   }
 
   public function request() {
     $url = $this->base_url . $this->request_type;
 
     $post_body = $this->post_prefix . "=" . $this->xml;
-    $length = strlen($post_body);
 
     $headers = array('Content-Type: application/x-www-form-urlencoded');
 
