@@ -12,8 +12,8 @@ use SparkLib\Xml\Builder;
  * Set yourself up like this:
  *
  * $quoter = new Quote;
- * $quoter->from_address = Address $from_address;             //see SparkLib\Shipping\Address
- * $quoter->to_address   = Address $to_address;
+ * $quoter->from = Address $from;             //see SparkLib\Shipping\Address
+ * $quoter->to   = Address $to;
  * $quoter->dimensions  = array( $length, $width, $height ); //decimals, in inches. rounded to 3 decimal places.
  * $quoter->weight       = $weight;                           //decimals, in ounces
  *
@@ -36,7 +36,7 @@ use SparkLib\Xml\Builder;
  * @author robacarp <robert.carpenter@sparkfun.com>
  */
 class Quoter extends Endicia {
-  public $to_address, $from_address, $dimensions, $weight;
+  public $to, $from, $dimensions, $weight;
 
   /**
    * Run a quote query to the endicia servers.
@@ -44,17 +44,17 @@ class Quoter extends Endicia {
    * @return array shipping quotes
    */
   public function quote(){
-    if ( ! $this->from_address instanceof Address)
-      throw new \LogicException("From address must be a SparkLib\Shipping\Address. Set Quote#from_address before fetching quotes");
-    if ( ! $this->to_address instanceof Address)
-      throw new \LogicException("From address must be a SparkLib\Shipping\Address. Set Quote#to_address before fetching quotes");
+    if ( ! $this->from instanceof Address)
+      throw new \LogicException("From address must be a SparkLib\Shipping\Address. Set Quote#from before fetching quotes");
+    if ( ! $this->to instanceof Address)
+      throw new \LogicException("To address must be a SparkLib\Shipping\Address. Set Quote#to before fetching quotes");
     if ($this->dimensions === null || ! is_array($this->dimensions) || count($this->dimensions) != 3)
       throw new \LogicException('Dimensions must be set to 3 slot array before quoting');
 
 
     $this->request_type = 'CalculatePostageRatesXML';
     $this->post_prefix  = 'postageRatesRequestXML';
-    $this->xml          = $this->fetchQuoteXML($this->from_address, $this->to_address, $this->dimensions, $this->weight);
+    $this->xml          = $this->fetchQuoteXML();
 
     $this->request();
 
@@ -78,30 +78,28 @@ class Quoter extends Endicia {
    *
    * @return string xml to be sent to Endicia servers
    */
-  public function fetchQuoteXML(Address $from, Address $to, array $dimensions, $weight){
-    $international = ! $to->domestic;
-
+  public function fetchQuoteXML(){
     // domestic postal codes can only be 5 digits
-    $postal_code = $international ? $to->postal_code
-                                  : substr($to->postal_code, 0, 5);
+    $postal_code = $this->to->international ? $this->to->postal_code
+                                            : substr($this->to->postal_code, 0, 5);
 
     $b = new Builder();
     $b->PostageRatesRequest
       ->nest(
         $this->authXML( $b )
-        ->MailClass( $international ? 'International' : 'Domestic' )
-        ->WeightOz( $weight )
+        ->MailClass( $this->to->international ? 'International' : 'Domestic' )
+        ->WeightOz( $this->weight )
         ->MailpieceShape('Parcel')
          ->MailpieceDimensions
            ->nest( $b->child()
              // Undocumented: Endicia can't handle dimensions with more than 3 decimal places. :|
-             ->Length( number_format( $dimensions[0], 3) )
-             ->Width(  number_format( $dimensions[1], 3) )
-             ->Height( number_format( $dimensions[2], 3) )
+             ->Length( number_format( $this->dimensions[0], 3) )
+             ->Width(  number_format( $this->dimensions[1], 3) )
+             ->Height( number_format( $this->dimensions[2], 3) )
            )
-        ->FromPostalCode( $from->postal_code )
+        ->FromPostalCode( $this->from->postal_code )
         ->ToPostalCode( $postal_code )
-        ->ToCountryCode( $to->country )
+        ->ToCountryCode( $this->to->country )
       );
 
     return $b->string(true);
