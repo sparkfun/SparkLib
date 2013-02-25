@@ -54,7 +54,7 @@ class Quoter extends Endicia {
 
     $this->request_type = 'CalculatePostageRatesXML';
     $this->post_prefix  = 'postageRatesRequestXML';
-    $this->xml          = $this->fetchQuoteXML();
+    $this->xml          = $this->quoteXML();
 
     $this->request();
 
@@ -78,7 +78,7 @@ class Quoter extends Endicia {
    *
    * @return string xml to be sent to Endicia servers
    */
-  public function fetchQuoteXML(){
+  public function quoteXML(){
     // domestic postal codes can only be 5 digits
     $postal_code = $this->to->international ? $this->to->postal_code
                                             : substr($this->to->postal_code, 0, 5);
