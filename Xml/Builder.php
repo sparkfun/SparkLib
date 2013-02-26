@@ -112,11 +112,19 @@ class Builder {
 
     $node = $this->last_node();
 
-    if ($document instanceof DOMDocument)
+    if ($document instanceof DOMDocument) {
       $kids = $document;
-    elseif ($document instanceof static)
+
+    } elseif ($document instanceof static) {
       $kids = $document->domdoc;
-    else
+
+    } elseif (is_array( $document )) {
+      foreach ($document as $e)
+        $this->nest( $e );
+
+      return $this;
+
+    } else
       throw new InvalidArgumentException(' nest only knows how to import children from a DOMDocument or a SparkLib\Xml\Builder.');
 
     if (count($kids) == 0)
