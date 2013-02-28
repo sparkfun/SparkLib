@@ -94,39 +94,73 @@ class Label extends Endicia {
     ;
   }
 
-  private function fromAddressXML($b){
+  private function fromAddressXML(){
     // Starting point (or return address)
-    return
-    $b->child()
-      ->FromName( $this->from->first_name . ' ' . $this->from->last_name )
-      ->FromCompany( $this->from->company )
-      ->ReturnAddress1( $this->from->address )
-      ->ReturnAddress2( $this->from->address2 )
-      ->FromCity( $this->from->city )
+    $b = new Builder;
+
+    $postal_code = $this->from->isDomestic()  ? $this->from->trimPostalCode()
+                                              : $this->from->postal_code;
+
+    if ( ! $this->from->blankName() )
+      $b->FromName( $this->from->fullName() );
+
+    if ( ! $this->from->blankCompany() )
+      $b->FromCompany( $this->from->company );
+
+    $b->ReturnAddress1( $this->from->address );
+
+    if ( ! $this->from->blankAddress2() )
+      $b->ReturnAddress2( $this->from->address2 );
+
+    $b->FromCity( $this->from->city )
       ->FromState( $this->from->state )
-      ->FromPostalCode( $this->from->postal_code )
+      ->FromPostalCode( $postal_code );
+
+    if ( ! $this->from->blankPhone() )
+      $b->FromPhone( $this->from->phone_number );
+
+    if ( ! $this->from->blankEmail() )
+      $b->FromEMail( $this->from->email );
+
       // ->FromZIP4( )
-      // ->FromPhone( )
-      // ->FromEMail( )
-    ;
+    return $b;
   }
 
+  /* In an ideal world, this would be the same code as the from address,
+   * perhaps with a different container or something.  Instead, we have to
+   * copypasta.
+   */
   private function toAddressXML(){
     $b = new Builder;
-    return
-    $b->child()
-      ->ToName( $this->to->first_name . ' ' . $this->to->last_name )
-      ->ToCompany( $this->to->company )
-      ->ToAddress1( $this->to->address )
-      ->ToAddress2( $this->to->address2 )
-      ->ToCity( $this->to->city )
+
+    $postal_code = $this->to->isDomestic()  ? $this->to->trimPostalCode()
+                                              : $this->to->postal_code;
+
+    if ( ! $this->to->blankName() )
+      $b->ToName( $this->to->fullName() );
+
+    if ( ! $this->to->blankCompany() )
+      $b->ToCompany( $this->from->company );
+
+    $b->ToAddress1( $this->to->address );
+
+    if ( ! $this->to->blankAddress2() )
+      $b->ToAddress2( $this->to->address2 );
+
+    $b->ToCity( $this->to->city )
       ->ToState( $this->to->state )
-      ->ToPostalCode( $this->to->postal_code )
-      // ->ToZIP4()
+      ->ToPostalCode( $postal_code )
       ->ToCountryCode( $this->to->country )
-      // ->ToPhone( )
-      // ->ToEMail( )
     ;
+
+    if ( ! $this->to->blankPhone() )
+      $b->ToPhone( $this->to->phone_number );
+
+    if ( ! $this->from->blankEmail() )
+      $b->ToEMail( $this->to->email );
+
+      // ->ToZIP4( )
+    return $b;
   }
 
   public function customsXML(){
