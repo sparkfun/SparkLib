@@ -135,7 +135,7 @@ class Template extends HTML {
   public function addContext ($context = array())
   {
     if ($context instanceof Template)
-      $context = $template->getContext();
+      $context = $context->getContext();
 
     foreach ($context as $key => $val) {
       $this->__set($key, $val);
