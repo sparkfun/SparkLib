@@ -1,6 +1,7 @@
 <?php
 namespace SparkLib;
 
+use \SparkLib\Renderable;
 use \SparkLib\Fail;
 
 /**
@@ -32,7 +33,7 @@ use \SparkLib\Fail;
  * Inside a template, the Template instance may be accessed as $this.
  * $h() is available as a wrapper around htmlspecialchars().
  */
-class Template extends HTML {
+class Template extends HTML implements Renderable {
 
   /**
    * Template filename.
