@@ -45,7 +45,7 @@ class Quoter extends Endicia {
    */
   public function quote(){
     if ( ! $this->from instanceof Address)
-      throw new \LogicException("From address must be a SparkLib\Shipping\Address. Set Quote#from before fetching quotes");
+      throw new \LogicException("From address must be a SparkLib\Shipping\Address. Got " . get_class($this->from) . " instead. Set Quote#from before fetching quotes.");
     if ( ! $this->to instanceof Address)
       throw new \LogicException("To address must be a SparkLib\Shipping\Address. Set Quote#to before fetching quotes");
     if ($this->dimensions === null || ! is_array($this->dimensions) || count($this->dimensions) != 3)
