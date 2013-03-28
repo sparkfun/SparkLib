@@ -1,16 +1,21 @@
 <?php
 namespace SparkLib\Shipping\Endicia;
 
-use SparkLib\Shipping\Endicia;
+use SparkLib\Shipping\Endicia,
+  SparkLib\Shipping\Endicia\MailClass,
+  SparkLib\Shipping\Address;
+
 use SparkLib\Xml\Builder;
 use \SimpleXMLElement;
 
 class Label extends Endicia {
-  public $to, $from, $dimmensions, $weight;
+  public $to, $from, $dimmensions, $weight, $mail_class;
 
   public $items = array();
 
-  public function add_item($value, $quantity, $weight, $description, $hs_tariff = null, $origin_country = null){
+  public $label;
+
+  public function addItem($value, $quantity, $weight, $description, $hs_tariff = null, $origin_country = null){
     $i = new \stdClass();
     $i->value       = $value;
     $i->quantity    = $quantity;
@@ -22,14 +27,44 @@ class Label extends Endicia {
     $this->items[] = $i;
   }
 
-  public function label(){
-    if ( ! $this->from instanceof Address)
-      throw new \LogicException("From address must be a SparkLib\Shipping\Address. Set Quote#from before fetching quotes");
-    if ( ! $this->to instanceof Address)
-      throw new \LogicException("To address must be a SparkLib\Shipping\Address. Set Quote#to before fetching quotes");
-    if ($this->dimensions === null || ! is_array($this->dimensions) || count($this->dimensions) != 3)
-      throw new \LogicException('Dimensions must be set to 3 slot array before quoting');
+  public function removeItems(){
+    $this->items = array();
+  }
 
+  public function isValid(){
+    try {
+      return $this->validate();
+    } catch (\LogicException $e) {
+      return false;
+    } catch (\InvalidArgumentException $e){
+      return false;
+    }
+  }
+
+  public function validate(){
+    if ( ! $this->from instanceof Address)
+      throw new \InvalidArgumentException("From address must be a SparkLib\Shipping\Address. Set Label#from before fetching quotes");
+
+
+    if ( ! $this->to instanceof Address)
+      throw new \InvalidArgumentException("To address must be a SparkLib\Shipping\Address. Set Label#to before fetching quotes");
+
+
+    if ($this->dimensions === null || ! is_array($this->dimensions) || count($this->dimensions) != 3)
+      throw new \LogicException('Dimensions must be set to 3 slot array before quoting: array(length, width, height)');
+
+
+    if ( ! $this->mail_class instanceof MailCLass )
+      throw new \InvalidArgumentException('$mail_class must be a SparkLib\Shipping\Endicia\MailClass.');
+
+    if ( isset($this->mail_class->max_items) && $this->mail_class->max_items < count($this->items) )
+      throw new \LogicException("Mail class {$this->mail_class->name} can only take {$this->mail_class->max_items} items. " . count($this->items) . " items given.");
+
+    return true;
+  }
+
+  public function label(){
+    $this->validate();
 
     $this->request_type = 'GetPostageLabelXML';
     $this->post_prefix  = 'labelRequestXML';
@@ -39,8 +74,9 @@ class Label extends Endicia {
 
     $this->parse_response();
     $this->check_status();
+    $this->fetchLabels();
 
-    return $this->rates;
+    return $this->response;
   }
 
   public function labelXML(){
@@ -48,15 +84,20 @@ class Label extends Endicia {
     $b->LabelRequest
       ->attribs(array(
         'Test'            => $this->test ? 'YES' : 'NO',
-        'LabelType'       => 'Default', //Page 24: TODO Domestic?, International
-        'LabelSubtype'    => 'None', //TODO Integrated
-        'LabelSize'       => '4x6',
-        'ImageFormat'     => 'ZPLII',
+        'LabelType'       => $this->to->isDomestic() ? 'Default' : 'International', //Page 24: TODO Domestic?, International
+        'LabelSubtype'    => $this->to->isDomestic() ? 'None'    : 'Integrated',
+        'LabelSize'       => $this->labelSize(),
+        'ImageFormat'     => $this->imageFormat(),
         // 'ImageResolution' => 203, // or 300
         // 'ImageRotation'   => 'Rotate180',
       ))
       ->nest( $this->mailClassXML($b)   )
-      ->nest( $this->authXML($b)        )
+      // ->nest( $this->authXML($b)        )
+      ->nest( $b->child()
+        ->RequesterID( $this->requester_id )
+        ->AccountID( $this->account_number )
+        ->PassPhrase( $this->password )
+      )
       ->nest( $this->packageSpecXML($b)   )
       ->nest( $this->fromAddressXML($b) )
       ->nest( $this->toAddressXML()   )
@@ -66,17 +107,32 @@ class Label extends Endicia {
         ->ShowReturnAddress( 'TRUE' )
         ->Stealth( 'TRUE' )  // Hide the postage amount
         ->ValidateAddress( 'TRUE' )
+
+        ->PartnerTransactionID('1234')
       );
 
     return $b->string(true);
   }
 
-  private function mailClassXML($b){
-    return
-      $b->child()
-        //todo
-        ->MailClass()
-      ;
+  private function labelSize(){
+    if ($this->to->isDomestic())
+      return '4x6';
+    elseif ( count($this->items) <= 5 )
+      return '4x6c';
+    else
+      return '';
+  }
+
+  private function imageFormat(){
+    $labelSize = $this->labelSize();
+    return $labelSize == '4x6' || $labelSize == '4x6c' ? 'ZPLII' : 'PDF' ;
+  }
+
+  private function mailClassXML(){
+    $b = new Builder;
+    $b->MailClass( $this->mail_class->name );
+
+    return $b;
   }
 
 
@@ -134,7 +190,7 @@ class Label extends Endicia {
     $b = new Builder;
 
     $postal_code = $this->to->isDomestic()  ? $this->to->trimPostalCode()
-                                              : $this->to->postal_code;
+                                            : $this->to->postal_code;
 
     if ( ! $this->to->blankName() )
       $b->ToName( $this->to->fullName() );
@@ -147,11 +203,13 @@ class Label extends Endicia {
     if ( ! $this->to->blankAddress2() )
       $b->ToAddress2( $this->to->address2 );
 
-    $b->ToCity( $this->to->city )
-      ->ToState( $this->to->state )
-      ->ToPostalCode( $postal_code )
-      ->ToCountryCode( $this->to->country )
-    ;
+    $b->ToCity( $this->to->city );
+
+    if ( isset($this->to->state) )
+      $b->ToState( $this->to->state );
+
+    $b->ToPostalCode( $postal_code )
+      ->ToCountryCode( $this->to->country );
 
     if ( ! $this->to->blankPhone() )
       $b->ToPhone( $this->to->phone_number );
@@ -165,10 +223,38 @@ class Label extends Endicia {
 
   public function customsXML(){
     $b = new Builder;
+
+    if ( ! $this->mail_class->isInternational() )
+      return '';
+
     $xml = $b->child()
-        ->IntegratedFormType( 'Form2976' ) // Form2976A
-        ->CustomsItems
-        ->nest( $this->customsItemsXML() )
+        ->IntegratedFormType( $this->mail_class->integrated_form )
+        // ->CustomsCertify('TRUE')  // the customes information is certified to be correct and the CustomsSigner name should be printed
+        // ->CustomsSigner('Yo Mamma')
+        ->CustomsSendersCopy('FALSE')
+        ->CustomsInfo
+        ->nest( $this->customsInfoXML() )
+    ;
+
+    return $xml;
+  }
+
+  public function customsInfoXML() {
+    $b = new Builder;
+    $xml = $b->ContentsType('Merchandise') // Documents, Gift, Other (need explain), ReturnedGoods, Sample, HumanitarianDonation, DangerousGoods
+              // ->ContentsExplanation('')       // 25 characters
+              // ->RestrictionType('None')       // Other Quarantine SanitaryPhytosanitaryInspection
+              // ->RestrictionComments('')       // 25 characters
+              // ->SendersLcustomsReference('')  // 14 characters
+              // ->ImportersCustomsReference('') // 40 characters
+              // ->LicenseNumber('')             // 16 characters
+              // ->CertificateNumber('')         // 12 characters
+              // ->InvoiceNumber('')             // 15 characters
+              // ->NonDeliveryOption('Abandon')  // Return
+              // ->InsuredNumber('')             // 13 characters
+              // ->EelPfc('')                    // 35 characters
+             ->CustomsItems
+             ->nest( $this->customsItemsXML() )
     ;
 
     return $xml;
@@ -176,21 +262,34 @@ class Label extends Endicia {
 
   public function customsItemsXML(){
     $f = function ($e) {
-      $b = new Builder;
-      return
-        $b->child()
-          ->CustomsItem
-          ->nest( $b->child()
-            ->Description(     $e->description    )
-            ->Quantity(        $e->quantity       )
-            ->Weight(          $e->weight         )
-            ->Value(           $e->value          )
-            ->HSTariffNumber(  $e->hs_tariff      )
-            ->CountryOfOrigin( $e->origin_country )
-          );
+      $item_info = new Builder;
+      $item_info->Description(     $e->description    )
+                ->Quantity(        $e->quantity       )
+                ->Weight(          $e->weight         )
+                ->Value(           $e->value          )
+      ->HSTariffNumber(  $e->hs_tariff      )
+      ->CountryOfOrigin( $e->origin_country );
+
+      $b = new Builder();
+      return $b->CustomsItem->nest( $item_info );
     };
 
     return array_map($f, $this->items);
+  }
+
+  public function fetchLabels(){
+    if ($this->response === null || $this->sxml === null)
+      throw new \LogicException('fetchLabels requires a parsed and valid label response before quotes can be assembled');
+
+    if ( isset($this->sxml->Base64LabelImage) ) {
+      $data = $this->sxml->Base64LabelImage;
+    } elseif ( isset($this->sxml->Label) )  {
+      $data = $this->sxml->Label->Image;
+    }
+
+    $this->label = base64_decode( $data );
+
+
   }
 
 }

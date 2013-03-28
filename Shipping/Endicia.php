@@ -106,7 +106,6 @@ class Endicia {
               ->AccountID( $this->account_number )
               ->PassPhrase( $this->password )
         );
-
   }
 
 }
