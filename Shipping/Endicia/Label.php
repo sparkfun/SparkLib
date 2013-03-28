@@ -9,7 +9,7 @@ use SparkLib\Xml\Builder;
 use \SimpleXMLElement;
 
 class Label extends Endicia {
-  public $to, $from, $dimmensions, $weight, $mail_class;
+  public $to, $from, $dimensions, $weight, $mail_class;
 
   public $items = array();
 
