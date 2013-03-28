@@ -80,14 +80,14 @@ class Quoter extends Endicia {
    */
   public function quoteXML(){
     // domestic postal codes can only be 5 digits
-    $postal_code = $this->to->international ? $this->to->postal_code
-                                            : substr($this->to->postal_code, 0, 5);
+    $postal_code = $this->to->isDomestic() ? substr($this->to->postal_code, 0, 5)
+                                           : $this->to->postal_code;
 
     $b = new Builder();
     $b->PostageRatesRequest
       ->nest(
         $this->authXML( $b )
-        ->MailClass( $this->to->international ? 'International' : 'Domestic' )
+        ->MailClass( $this->to->isDomestic() ? 'Domestic' : 'International' )
         ->WeightOz( $this->weight )
         ->MailpieceShape('Parcel')
          ->MailpieceDimensions
