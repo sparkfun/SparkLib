@@ -1,6 +1,8 @@
 <?php
 namespace SparkLib\SocialNoise;
 
+use \SparkLib\Fail;
+
 class GooglePlus extends \SparkLib\SocialNoise {
 
   protected $_key = null;
@@ -37,9 +39,20 @@ class GooglePlus extends \SparkLib\SocialNoise {
     $html = '<table class="' . htmlspecialchars($this->tableClass) . '">';
 
     foreach ($result->items as $activity) {
-      $html .= '<tr>'
-             . '<td><img src="' . $activity->actor->image->url . '"></td>'
-             . '<td><a href="' . $activity->actor->url . '">' . htmlspecialchars($activity->actor->displayName) . '</a> ';
+
+      $image_url = $activity->actor->image->url;
+
+      $html .= '<tr>';
+      if (strlen($image_url) > 14) {
+        // if actor->image->url is this short, it's probably bunk data, and we are too
+        // lazy to go digging through the rest of the stuff in the response looking
+        // for a valid one:
+        $html .=  '<td><img height=50 width=50 src="' . htmlspecialchars($image_url) . '"></td>';
+      } else {
+        $html .= '<td></td>';
+      }
+
+      $html .= '<td><a href="' . htmlspecialchars($activity->actor->url) . '">' . htmlspecialchars($activity->actor->displayName) . '</a> ';
 
       if (isset($activity->title))
         $html .= $activity->title;
