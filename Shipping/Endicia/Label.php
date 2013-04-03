@@ -72,8 +72,8 @@ class Label extends Endicia {
 
     $this->request();
 
-    $this->parse_response();
-    $this->check_status();
+    $this->parseResponse();
+    $this->checkStatus();
     $this->fetchLabels();
     $this->fetchTracking();
     $this->fetchPostageAmount();

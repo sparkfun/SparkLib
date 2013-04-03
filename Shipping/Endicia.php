@@ -48,7 +48,7 @@ class Endicia {
     return $this->response;
   }
 
-  public function parse_response(){
+  public function parseResponse(){
     if ($this->response === null)
       throw new \LogicException('Cannot parse, no valid response.');
 
@@ -71,7 +71,7 @@ class Endicia {
     return true;
   }
 
-  public function check_status(){
+  public function checkStatus(){
     if ($this->sxml === null)
       throw new \LogicException("Cannot check response status without a parsed response");
     if ( ! $this->valid_response)

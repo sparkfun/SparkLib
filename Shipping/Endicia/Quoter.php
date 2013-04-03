@@ -58,8 +58,8 @@ class Quoter extends Endicia {
 
     $this->request();
 
-    $this->parse_response();
-    $this->check_status();
+    $this->parseResponse();
+    $this->checkStatus();
 
     $this->buildQuotes();
 
