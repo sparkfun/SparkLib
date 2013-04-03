@@ -75,6 +75,8 @@ class Label extends Endicia {
     $this->parse_response();
     $this->check_status();
     $this->fetchLabels();
+    $this->fetchTracking();
+    $this->fetchPostageAmount();
 
     return $this->response;
   }
@@ -114,7 +116,7 @@ class Label extends Endicia {
     return $b->string(true);
   }
 
-  private function labelSize(){
+  public function labelSize(){
     if ($this->to->isDomestic())
       return '4x6';
     elseif ( count($this->items) <= 5 )
@@ -123,7 +125,7 @@ class Label extends Endicia {
       return '';
   }
 
-  private function imageFormat(){
+  public function imageFormat(){
     $labelSize = $this->labelSize();
     return $labelSize == '4x6' || $labelSize == '4x6c' ? 'ZPLII' : 'PDF' ;
   }
@@ -289,7 +291,31 @@ class Label extends Endicia {
 
     $this->label = base64_decode( $data );
 
+  }
 
+  public function fetchTracking(){
+    if ($this->response === null || $this->sxml === null)
+      throw new \LogicException('fetchTracking requires a parsed and valid label response before quotes can be assembled');
+
+    if ( isset($this->sxml->TrackingNumber) ) {
+      $this->tracking_number = $this->sxml->TrackingNumber;
+    } else {
+      $this->tracking_number = null;
+    }
+
+    return $this->tracking_number;
+  }
+
+  public function fetchPostageAmount(){
+    if ($this->response === null || $this->sxml === null)
+      throw new \LogicException('fetchPostageAmount requires a parsed and valid label response before quotes can be assembled');
+
+    if ( isset($this->sxml->FinalPostage) )
+      $this->postage_paid = $this->sxml->FinalPostage;
+    else
+      $this->postage_paid = null;
+
+    return $this->postage_paid;
   }
 
 }
