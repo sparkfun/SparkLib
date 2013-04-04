@@ -68,8 +68,6 @@ class Account extends Endicia{
     if (! $this->valid_response)
       return false;
 
-    // print_r($this->response);
-
     // TODO Come back for this when endicia responds to the email with something helpful
     // $state = $this->pullAccountStatus();
     // return $state;
