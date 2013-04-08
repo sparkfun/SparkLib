@@ -18,8 +18,8 @@ class Account extends Endicia{
     $this->xml          = $this->accountStatusRequestXML();
     $this->request();
 
-    $this->parse_response();
-    $this->check_status();
+    $this->parseResponse();
+    $this->checkStatus();
 
     return $this->pullAccountStatus();
   }
@@ -62,8 +62,8 @@ class Account extends Endicia{
     $this->xml          = $this->buyPostageXML($amount);
 
     $this->request();
-    $this->parse_response();
-    $this->check_status();
+    $this->parseResponse();
+    $this->checkStatus();
 
     if (! $this->valid_response)
       return false;
