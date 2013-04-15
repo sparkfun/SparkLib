@@ -53,7 +53,7 @@ class Template extends HTML implements Renderable {
   /**
    * Array of properties/variables available in template.
    */
-  protected $_context;
+  protected $_context = array();
 
   /**
    * Create a new template.
@@ -65,12 +65,13 @@ class Template extends HTML implements Renderable {
    * @param array optional array of variables to extract() before template is require'd
    * @param boolean cache template contents?
    */
-  public function __construct ($template = null, $context = array())
+  public function __construct ($template = null, $context = null)
   {
     $this->_templateDir = \LIBDIR . 'templates';
     if ($template)
       $this->setTemplate($template);
-    $this->setContext($context);
+    if (is_array($context))
+      $this->setContext($context);
   }
 
   /**
@@ -126,21 +127,32 @@ class Template extends HTML implements Renderable {
       $this->_context = $context;
     elseif ($context instanceof Template)
       $this->_context = $context->getContext();
+    else
+      throw new \UnexpectedValueException('context must be array or Template instance');
     return $this;
   }
 
   /**
    * Add a set of values to existing context. Overwrites existing values
    * if the given ones happen to overlap, leaves existing ones in place.
+   *
+   * If given an instance of Template, will copy that template's entire
+   * context.
+   *
+   * @return $this
    */
   public function addContext ($context = array())
   {
     if ($context instanceof Template)
       $context = $context->getContext();
 
+    if (! is_array($context))
+      throw new \UnexpectedValueException('context must be an array or Template instance');
+
     foreach ($context as $key => $val) {
       $this->__set($key, $val);
     }
+
     return $this;
   }
 
