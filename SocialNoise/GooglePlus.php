@@ -2,6 +2,7 @@
 namespace SparkLib\SocialNoise;
 
 use \SparkLib\Fail;
+use \SparkLib\Util\Text;
 
 class GooglePlus extends \SparkLib\SocialNoise {
 
@@ -39,7 +40,6 @@ class GooglePlus extends \SparkLib\SocialNoise {
     $html = '<table class="' . htmlspecialchars($this->tableClass) . '">';
 
     foreach ($result->items as $activity) {
-
       $image_url = $activity->actor->image->url;
 
       $html .= '<tr>';
@@ -60,9 +60,11 @@ class GooglePlus extends \SparkLib\SocialNoise {
       if (isset($activity->object->attachments)) {
         foreach($activity->object->attachments as $attached) {
           if (isset($attached->displayName)) {
+            $displayname = Text::truncate($attached->displayName, 140);
+
             $html .= '<br><a href="'
                    . htmlspecialchars($attached->url)
-                   . '">' . htmlspecialchars($attached->displayName) . '</a>';
+                   . '">' . htmlspecialchars($displayname) . '</a>';
           }
         }
       }
