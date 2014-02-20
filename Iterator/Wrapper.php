@@ -12,6 +12,11 @@ class Wrapper extends \SparkLib\Iterator {
     $this->_wrapperClass = $wrapper_class;
   }
 
+  public function iterator ()
+  {
+    return $this->_iterator;
+  }
+
   public function current ()
   {
     if ($this->_iterator->valid()) {
