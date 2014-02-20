@@ -26,7 +26,20 @@ class Text {
    */
   public static function asciify ($text, $source_charset = 'UTF-8')
   {
-    return \iconv($source_charset, "ASCII//TRANSLIT//IGNORE", $text);
+    $encoding = mb_detect_encoding($text);
+    if (! $encoding)
+      $encoding = $source_charset;
+
+    // LC_CTYPE cannot be C or POSIX
+    // http://us3.php.net/manual/en/function.iconv.php#74101
+    setlocale(LC_CTYPE, 'en_US');
+    return \iconv($encoding, "ASCII//TRANSLIT//IGNORE", $text);
+  }
+
+  public static function UPSCrapToWorkingZPL ($text)
+  {
+    //return \iconv('UTF-8', "CP850//TRANSLIT", $text);
+    return \iconv('UTF-8', "ISO-8859-1//TRANSLIT", $text);
   }
 
   /**
@@ -67,6 +80,7 @@ class Text {
 
   public static function truncateToWord ($str, $len = 25)
   {
+    $str = trim(preg_replace('/\s+/', ' ', $str));
     if (strlen($str) > $len) {
       $ret = wordwrap($str, $len);
       $ret = substr($ret, 0, strpos($ret, "\n"));
