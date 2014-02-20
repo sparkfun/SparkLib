@@ -54,7 +54,7 @@ class Bugzilla {
    * @return array of stdClass bug objects for given search
    * @return boolean false if search failed altogether (I think)
    */
-  public function search (array $params)
+  public function search (array $params, $return_count_only = false)
   {
     $client = new Client($this->_uri . 'jsonrpc.cgi');
     try {
@@ -64,12 +64,64 @@ class Bugzilla {
       return false;
     }
 
+    if ($return_count_only)
+      return count($result['bugs']);
+
     $bugs = array();
     for($i = 0, $c = count($result['bugs']); $i < $c; ++$i) {
       $bugs[] = (object)$result['bugs'][$i];
     }
 
     return $bugs;
+  }
+
+  /**
+   * Sort and return an array of objects representing search results.
+   *
+   * Usage: Bugzilla::sortBugs($bugs, 'priority', SORT_ASC, 'last_change_time', SORT_DESC);
+   * ...where $bugs is an array of stdClass objects representing bugs (e.g. the output of Bugzilla->search())
+   *
+   * @return array of stdClass bug objects for given search
+   */
+  public static function sortBugs ()
+  {
+
+    // Pull unsorted bug array off the front of the argument list
+    $args = func_get_args();
+    $bugs = array_shift($args);
+
+    // Trivial case: kick back out if there are no bugs to sort
+    if (! count($bugs))
+      return $bugs;
+
+    // Build the sort arrays!
+    //
+    // We start with an unsorted array ($bugs) and an alternating list of fields and directions (priority, SORT_ASC...)
+    // For array_multisort we want a single array of arguments that looks like this:
+    //
+    // [ [Bug 0 field 0 value, Bug 1 field 0 value, ...], direction 0, [Bug 0 field 1 value, Bug 1 field 1 value, ...], direction 1, ... ]
+    //
+    // We do this in place by walking our array of arguments (which is already in the right order)
+    // and turning each field name string into its corresponding array of field values from the unsorted bug list
+    foreach ($args as $n => $field) {
+      if (is_string($field)) {
+        if (!strlen($field) || !isset($bugs[0]->$field))
+          throw new Exception ("Invalid sort field: " . $field);
+        $tmp = array();
+        foreach ($bugs as $b => $bug)
+          $tmp[$b] = $bug->$field;
+        $args[$n] = $tmp;
+      }
+    }
+
+    // Attach the unsorted bug list by reference onto the end of our arguments array.
+    // array_multisort sorts arguments in order, so the last argument needs to be the master unserted list.
+    // It also sorts arguments in place, hence why they must be passed by reference.
+    $args[] = &$bugs;
+    call_user_func_array('array_multisort', $args);
+
+    return array_pop($args);
+
   }
 
   /**
