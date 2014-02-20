@@ -1,6 +1,8 @@
 <?php
 namespace SparkLib;
 
+use \SparkLib\Blode\Event;
+
 /**
  * A simple error and exception logging facility.
  *
@@ -146,8 +148,8 @@ class Fail {
     }
 
     // If blode is sitting around, send it our message.
-    if (class_exists('\BlodeEvent')) {
-      \BlodeEvent::err($message_text);
+    if (class_exists('Event')) {
+      Event::err($message_text);
     }
 
     if (static::$logUserAgent && isset($_SERVER['HTTP_USER_AGENT'])) {
@@ -189,7 +191,7 @@ class Fail {
 
     $errorType = static::$errorList[(int)$errno];
 
-    self::log("{$errorType} - $errfile:$errline - $errstr\n");
+    self::log("$errfile +$errline - {$errorType} - $errstr\n");
 
     if (static::$doBacktraces) {
       // pull this current function call off of the trace
@@ -246,7 +248,7 @@ class Fail {
     $str = '';
 
     foreach ($backtrace as $stack_frame) {
-      $str .= "{$stack_frame['file']}:{$stack_frame['line']} in function {$stack_frame['function']}(";
+      $str .= "{$stack_frame['file']} +{$stack_frame['line']}: {$stack_frame['function']}(";
 
       $first_argument = true;
       foreach ($stack_frame['args'] as $function_argument) {
@@ -353,7 +355,7 @@ class Fail {
 <hr>
 HTML;
 
-    print \wordwrap(self::render(), 100, "\n\t") . "\n</pre>";
+    print self::render() . "\n</pre>";
     print "<script language=\"javascript\">$('body').keyup(function(e) { if(e.keyCode == 67) { $('#sparkfail-errors').hide() }; });</script>";
   }
 
