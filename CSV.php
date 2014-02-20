@@ -24,7 +24,7 @@ class CSV {
   public function addHeader (array $header)
   {
     if (! is_array($header))
-      throw new Exception('SparkCSV expects an array as a header');
+      throw new Exception('SparkLib\CSV expects an array as a header');
 
     $this->_header = $header;
   }
