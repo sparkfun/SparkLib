@@ -32,10 +32,14 @@ class Reddit extends \SparkLib\SocialNoise {
       if ($i++ > $qty) {
         break;
       }
+
+      $post_title = $h(trim($post->data->title));
+      if ($post->data->score >= 10)
+        $post_title = "<b>$post_title</b>";
       $html .= '<li><a href="http://www.reddit.com/'
              . $h($post->data->permalink)
              . '">'
-             . $h(trim($post->data->title)) . "</a>";
+             . $post_title . "</a>";
 
       $author = $post->data->author;
 
