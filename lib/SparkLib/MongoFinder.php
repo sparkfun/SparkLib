@@ -99,12 +99,36 @@ class MongoFinder extends Iterator {
       case '<=':
         $this->_where[$this->_whereWaiting] = [ '$lte' => $value ];
         break;
+      case 'in':
+        $this->_where[$this->_whereWaiting] = [ '$in' => $value ];
+        break;        
     }
     $this->_paramsChanged = true;
     $this->_whereWaiting = false;
 
     return $this;
   }
+
+  /**
+   * adds parameter to where array that will be used in find()
+   *
+   * @param string $regex - the regex to match the against $key previously set in where()
+   * @param string $flags - optional, regex search flags
+   *
+   * @return MongoFinder
+   */
+  public function isLike($regex, $flags = '') {
+    if (! $this->_where[$this->_whereWaiting])
+      throw new \Exception('Mongo WHERE not called');
+
+    $this->_where[$this->_whereWaiting] = [ '$regex' => "$regex", '$options' => "$flags" ];
+
+    $this->_paramsChanged = true;
+    $this->_whereWaiting = false;
+
+    return $this;
+  }
+
 
   /**
    * adds parameter to where array that will be used in find() use for values
@@ -165,6 +189,21 @@ class MongoFinder extends Iterator {
     return $this->is($value, '=');
   }
 
+  /**
+   * alias for is($value, 'in')
+   *
+   * @param mixed $value value you're checking against $key set in where()
+   *
+   * @return MongoFinder
+   */
+  public function in($value) {
+    if(! is_array($value))
+      return $this;
+
+    $this->_paramsChanged = true;
+    return $this->is($value, 'in');
+  }
+  
   /**
    * alias for is($value, [ '$exists' => false ])
    *
@@ -382,6 +421,21 @@ class MongoFinder extends Iterator {
     $this->_paramsChanged = false;
 
     return $this;
+  }
+
+  /**
+   * Resets all query info
+   */
+  public function reset() {
+    $this->_where = [];
+    $this->_sort = [];
+    $this->_whereWaiting = false;
+    $this->_sortWaiting = false;
+    $this->_paramsChanged = false;
+    $this->_resultCount = null;
+    $this->_row = null;
+    $this->_query = null;
+    $this->_mongoCursor = null;
   }
 
   /**
