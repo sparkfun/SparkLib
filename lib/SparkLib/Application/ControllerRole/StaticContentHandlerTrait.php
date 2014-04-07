@@ -21,7 +21,7 @@ trait StaticContentHandlerTrait {
 
       $filter = [
         "entity_table" => "custom_pages",
-        "entity_id"    => (string) $page->id(),
+        "entity_id"    => (string) $page->static_content_name,
         "visible"      => true
       ];
 
