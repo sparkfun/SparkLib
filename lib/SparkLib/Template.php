@@ -263,6 +263,8 @@ class Template extends HTML implements Renderable {
    */
   protected function slurp ($template)
   {
+    // TODO:  This can theoretically get overwritten by a 'filename' key
+    // in the context array.  There has to be some clever way around this.
     $filename = $this->_templateDir . \DIRECTORY_SEPARATOR . $template;
 
     // Pull context variables, as references, into this scope.
