@@ -49,11 +49,16 @@ class Text {
    * @param $str string to clean
    * @return string
    */
-  public static function clean_str ($str)
+  public static function clean_str ($str, $extra = null)
   {
     // manually specify some
-    $trans = array("&" => "and",
-                   "'" => "");
+    $trans = [
+      "&" => "and",
+      "'" => ""
+    ];
+
+    if ($extra && is_array($extra))
+      $trans = array_merge($trans, $extra);
 
     $str = trim(strtr($str, $trans));
 
