@@ -11,6 +11,11 @@ abstract class Environment {
   abstract public function startSession ();
   abstract public function endSession ();
 
+  /**
+   * Send a header.
+   */
+  abstract public function header ($header);
+
   public function req ()  { return $this->_req;  }
   public function path () { return $this->_path; }
 

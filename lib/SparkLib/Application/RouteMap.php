@@ -20,7 +20,7 @@ class RouteMap {
     // __construct() and friends.
     'action'     => '(?:[a-z][a-z_]*[a-z]|[a-z])',
 
-    'shortlink'  => '[enptw][0-9]+',
+    'shortlink'  => '[enptwr][0-9]+',
     'id'         => '[0-9]+',
     'bson'       => '[0-9a-z]{24}',
     'default'    => '',

@@ -70,6 +70,11 @@ class HTTP extends Environment {
     return $_SERVER['REQUEST_METHOD'];
   }
 
+  public function header ($header)
+  {
+    header($header);
+  }
+
   /**
    * Grab the first thing in the Accepts: header, check it against
    * a whitelist, and (if it passes) set the expected MIME type of request

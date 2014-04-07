@@ -477,6 +477,11 @@ abstract class Application {
   }
 
   /**
+   * @return Environment for the current SAPI
+   */
+  public function env () { return $this->_env; }
+
+  /**
    * @return Request which models the current request
    */
   public function req () { return $this->_req; }

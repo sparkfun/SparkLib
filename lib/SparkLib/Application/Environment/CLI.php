@@ -13,6 +13,21 @@ use \SparkLib\Application\Request\Delete;
  * or less the same way it treats data from HTTP requests.
  *
  * See comments on Environment\HTTP for more detailed rationale.
+ *
+ * Arguments work like so:
+ *
+ * $ executable
+ * $ executable controller
+ * $ executable controller action
+ * $ executable controller action param1=val param2=val ...
+ *
+ * Which should correspond almost exactly to:
+ *
+ * /index.php
+ * /index.php/controller
+ * /index.php/controller/action
+ * /index.php/controller/action?param1=val
+ *
  */
 class CLI extends Environment {
 
@@ -63,11 +78,12 @@ class CLI extends Environment {
     // for all the routing crap:
     $this->_path = implode('/', $path_arr);
 
-    if (! strlen($this->_path))
-      $this->_path = '/';
-
-    if ($this->_path[0] !== '/') {
-      $this->_path = '/' . $this->_path;
+    // if we have a path, but it doesn't start with a leading slash,
+    // add one:
+    if (strlen($this->_path)) {
+      if ($this->_path[0] !== '/') {
+        $this->_path = '/' . $this->_path;
+      }
     }
 
     // set up a Request object
@@ -106,6 +122,11 @@ class CLI extends Environment {
   public function endSession ()
   {
     $GLOBALS['_SESSION'] = array();
+  }
+
+  public function header ($header)
+  {
+    return;
   }
 
 }

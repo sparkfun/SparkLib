@@ -112,10 +112,12 @@ abstract class Controller {
       }
     }
 
-    // Send headers
-    foreach ($this->_headers as $header)
-      header($header);
-    header('Content-Type: ' . $this->getType());
+    // Send headers - passed off to environment for SAPI-specific
+    // handling
+    foreach ($this->_headers as $header) {
+      $this->_app->env()->header($header);
+    }
+    $this->_app->env()->header('Content-Type: ' . $this->getType());
 
     // If this is a HEAD request, we don't want a response body
     if ($this->req() instanceof \SparkLib\Application\Request\Head)
@@ -136,9 +138,13 @@ abstract class Controller {
           throw new Exception("unsupported mime type [{$this->getType()}] from {$this->_action}()");
           break;
       }
+    } elseif ($result instanceof \Generator) {
+      foreach ($result as $yielded) {
+        echo $yielded;
+      }
     } else {
       throw new Exception(
-        "expected string, array, resource, Template, or Action from {$this->_action}(), but got a " . gettype($result)
+        "expected string, array, resource, generator, Template, or Action from {$this->_action}(), but got a " . gettype($result)
       );
     }
   }
@@ -479,6 +485,7 @@ abstract class Controller {
 
     if (is_array($this->_modelInfo['perms'])) {
       foreach ($this->_modelInfo['perms'] as $field => $perm) {
+
         if (isset($req[$field]) && ! $user->hasPermission(key($perm), current($perm)) &&
 
           // xxx this is duplicating some logic in dino&update, asking if the
@@ -490,6 +497,19 @@ abstract class Controller {
           $this->_app->passMessage("You are not allowed to update {$field}", 'error');
           unset($req[$field]);
         }
+      }
+    }
+
+    // use loose comparison here to deal with the fact that we're getting
+    // strings but the models have actual typed values (we don't want to set
+    // identical values to the ones that're already set):
+    $fields = array_keys($req);
+    foreach ($fields as $field) {
+      if (! $instance->isValidField($field))
+        continue;
+
+      if ($req[$field] == $instance->$field) {
+        unset($req[$field]);
       }
     }
 
