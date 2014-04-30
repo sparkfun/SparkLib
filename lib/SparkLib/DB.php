@@ -105,12 +105,12 @@ class DB {
    *                       placeholders in $sql
    * @return array of query results
    */
-  public static function fetchAll ($sql, $params = array())
+  public static function fetchAll ($sql, $params = [], $style = \PDO::FETCH_ASSOC)
   {
     $dbh = self::pdo();
     $sth = $dbh->prepare($sql);
     $sth->execute($params);
-    return $sth->fetchAll(\PDO::FETCH_ASSOC);
+    return $sth->fetchAll($style);
   }
 
   /**
@@ -122,7 +122,7 @@ class DB {
    * @param string $style: optional fetch mode. In the form of PDO::FETCH_*
    * @return array of query results
    */
-  public static function fetch ($sql, $params = array(), $style = null)
+  public static function fetch ($sql, $params = [], $style = \PDO::FETCH_ASSOC)
   {
     $dbh = self::pdo();
     $sth = $dbh->prepare($sql);
@@ -153,6 +153,39 @@ class DB {
       }
     }
 
+  }
+
+  /**
+   * Convenience method for PDO::beginTransaction().
+   *
+   * Starts a database transaction.
+   *
+   * @returns nothing
+   */
+  public static function begin () {
+    self::pdo()->beginTransaction();
+  }
+
+  /**
+   * Convenience method for PDO::commit().
+   * 
+   * Commit a database transaction.
+   *
+   * @returns nothing
+   */
+  public static function commit () {
+    self::pdo()->commit();
+  }
+
+  /**
+   * Convenience method for PDO::rollBack().
+   * 
+   * Rollback a database transaction.
+   *
+   * @returns nothing
+   */
+  public static function rollback () {
+    self::pdo()->rollBack();
   }
 
 }
