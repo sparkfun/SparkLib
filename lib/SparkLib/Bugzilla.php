@@ -132,13 +132,17 @@ class Bugzilla {
    * @param string $string to search for
    * @return array of stdClass bug objects
    */
-  public function searchCustomField ($field, $string)
+  public function searchCustomField ($field, $string, $new_only = false)
   {
     $search_url = 'buglist.cgi?query_format=advanced&f1=cf_'
                 . urlencode($field)
                 . '&v1='
                 . urlencode($string)
                 . '&o1=substring&order=Bug&ctype=csv';
+
+    if ($new_only) {
+      $search_url .= '&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED';
+    }
 
     $csv  = file_get_contents($this->_uri . $search_url);
 
