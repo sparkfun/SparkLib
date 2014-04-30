@@ -393,6 +393,10 @@ abstract class Application {
     }
 
     $partial->setTemplate($name . '.tpl.php');
+    if (! $partial->templateFileExists()) {
+      // we haaaaaaaaates it:
+      $partial->setTemplateDir(\LIBDIR . 'templates/partials');
+    }
 
     return $partial;
   }
