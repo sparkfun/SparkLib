@@ -138,7 +138,7 @@ class Bugzilla {
                 . urlencode($field)
                 . '&v1='
                 . urlencode($string)
-                . '&o1=substring&order=Bug&ctype=csv';
+                . '&o1=regexp&order=Bug&ctype=csv';
 
     if ($new_only) {
       $search_url .= '&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED';

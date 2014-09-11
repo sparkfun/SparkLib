@@ -2,12 +2,13 @@
 namespace SparkLib\Application;
 
 use \SparkLib\HTML;
+use \SparkLib\Application\Action;
 
 /**
  * A class to model links within Applications. Used by 
  * Application&link(), etc.
  */
-class Link extends HTML {
+class Link extends HTML implements Action {
 
   protected $_controller;
   protected $_id;
@@ -18,6 +19,8 @@ class Link extends HTML {
   protected $_title;
   protected $_type = '';
   protected $_target = '';
+
+  protected $_redirectStatus = 302;
 
   /**
    * Make a new link.
@@ -149,6 +152,19 @@ class Link extends HTML {
   }
 
   /**
+   * Set an HTTP status code in case we generate a Redirect later in
+   * redirect().
+   *
+   * @param integer $status
+   * @return Link
+   */
+  public function redirectStatus ($status)
+  {
+    $this->_redirectStatus = $status;
+    return $this;
+  }
+
+  /**
    * Get the currently set title.
    *
    * @return string title, null if not set
@@ -219,9 +235,29 @@ class Link extends HTML {
   /**
    * @return \SparkLib\Application\Redirect for current link
    */
-  public function redirect ($status = 302)
+  public function redirect ($status = null)
   {
-    return new Redirect($this->path(), $status);
+    if (isset($status))
+      $this->redirectStatus($status);
+
+    return new Redirect($this->path(), $this->_redirectStatus);
+  }
+
+  /**
+   * If this is used as an Action, returned from a Controller action method
+   * (yes I know the terminology overlaps confusingly), redirect.
+   *
+   * So basically you can say:
+   *
+   * $this->respondTo()->html = function () {
+   *   return $this->app()->link('orders');
+   * };
+   *
+   * ...and it'll infer the ->redirect() call.
+   */
+  public function fire ()
+  {
+    $this->redirect()->fire();
   }
 
 }

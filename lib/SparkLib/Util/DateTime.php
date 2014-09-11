@@ -8,6 +8,18 @@ namespace SparkLib\Util;
  */
 class DateTime {
 
+  public static function format ($timestamp, $format = 'Y-m-d')
+  {
+    if (is_string($timestamp))
+      $timestamp = strtotime($timestamp);
+
+    return date($format, $timestamp);
+  }
+
+  public static function formatDefaultTimeAndDate ($date) {
+    return static::format($date, 'Y-m-d G:i');
+  }
+
   public static function interval_since ($date)
   {
     $iv = date_diff(

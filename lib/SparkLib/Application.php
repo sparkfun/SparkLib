@@ -322,10 +322,6 @@ abstract class Application {
       'app'   => get_class($this),
     ];
 
-    // do not track:
-    if (isset($_SERVER['HTTP_DNT']))
-      $run['dnt'] = $_SERVER['HTTP_DNT'];
-
     Event::debug($run);
   }
 

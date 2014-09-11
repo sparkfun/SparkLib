@@ -38,7 +38,7 @@ class CLI extends Environment {
   /x';
 
   protected $_flagpat = '/
-    -+
+    ^-+
     (?<flag> [a-z]+)
   /xi';
 
@@ -51,6 +51,7 @@ class CLI extends Environment {
 
     $request  = [];
     $path_arr = [];
+    $argc     = 1;
 
     foreach ($argv as $arg) {
 
@@ -64,6 +65,10 @@ class CLI extends Environment {
 
         // set some bits for --flag style flags
         $this->_flags[ $matches['flag'] ] = true;
+
+      } else if (count($path_arr) >= 2) {
+
+        $request['arg' . ($argc++)] = $arg;
 
       } else {
 
@@ -99,10 +104,10 @@ class CLI extends Environment {
   public function method ()
   {
     // silly, liable to break:
-    if ($this->_flags['get'])    return 'GET';
-    if ($this->_flags['post'])   return 'POST';
-    if ($this->_flags['delete']) return 'DELETE';
-    if ($this->_flags['head'])   return 'HEAD';
+    if (isset($this->_flags['get']))    return 'GET';
+    if (isset($this->_flags['post']))   return 'POST';
+    if (isset($this->_flags['delete'])) return 'DELETE';
+    if (isset($this->_flags['head']))   return 'HEAD';
 
     // silly default:
     return 'GET';

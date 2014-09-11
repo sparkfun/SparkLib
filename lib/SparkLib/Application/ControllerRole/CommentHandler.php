@@ -1,16 +1,19 @@
 <?php
 namespace SparkLib\Application\ControllerRole;
 
-use \SparkLib\Application\Redirect;
-use \SparkLib\Template;
-use \CustomerCommentSaurus;
-use \CustomerSaurus;
-use \LogSaurus;
-use \MongoDate;
-use \MongoId;
-use \MongoDBI;
-use \SparkEmailer;
-use \Exception;
+use \Spark\Mailer;
+
+use \SparkLib\Application\Redirect,
+    \SparkLib\Template;
+
+use \CustomerCommentSaurus,
+    \CustomerSaurus,
+    \LogSaurus;
+
+use \MongoDate,
+    \MongoId,
+    \MongoDBI,
+    \Exception;
 
 /**
  * Let a controller handle comment functions.
@@ -179,6 +182,9 @@ trait CommentHandler {
       $updated_html = $this->app()->partial('comments/view');
       $updated_html->entity_table = $this->req()->entity;
       $updated_html->entity_id    = $this->req()->entity_id;
+      if ($updated_html->entity_table == 'products') {
+        $updated_html->do_heading  = false;
+      }
       $updated_html->comments = $mongo->comments->find([
         'entity_table' => $this->req()->entity,
         'entity_id'    => $this->req()->entity_id,
@@ -187,12 +193,15 @@ trait CommentHandler {
       ]);
       $updated_html->comments->sort(["ratings_count" => -1, "ctime" => -1]);
 
-      return array(
+      return [
         'status'     => $status,
         'message'    => $message,
         'comment_id' => (string) $comment->id(),
-        'html'       => $updated_html->render()
-      );
+        // TODO: stripping this as a temporary fix for bug #9548 and reloading
+        //       page instead, 19/Jun/2014 - see also public/js/comment.js.
+        //       Should really figure out the character encoding issue instead.
+        // 'html'       => $updated_html->render()
+      ];
     };
 
     $this->respondTo()->html = function() use ($status, $message, $comment) {
@@ -229,7 +238,96 @@ trait CommentHandler {
     }
 
     $this->respondTo()->json = function() use ($status, $message) {
-      return array("status" => true, 'message' => $message);
+      return array("status" => $status, 'message' => $message);
+    };
+  }
+
+  /**
+   * Hide all of a user's comment from public view (moderators only).
+   *
+   * @access public
+   */
+  public function hide_all ()
+  {
+    $this->app()->require_authentication();
+    $this->req()->expect('bson');
+    $status = true;
+    $message = '';
+
+    if(!$_SESSION['user']->customer()->customer_is_moderator) {
+      $status  = false;
+      $message = 'Only moderators can do that.';
+    }
+
+    try {
+      $source_comment = new CustomerCommentSaurus($this->req()->bson);
+    } catch (Exception $e) {
+      $status  = false;
+      $message = 'No such comment found.';
+    }
+
+    if($status) {
+      $mongo = MongoDBI::getInstance();
+      try {
+        $mongo->comments->update(
+          ['customer_id' => ['$in' => [$source_comment->customer_id, (int)$source_comment->customer_id]]],
+          ['$set' => ['visible' => false]],
+          ['multiple' => true]
+        );
+      } catch (Exception $e) {
+        $status = false;
+        $message = "Failed to hide comments. Try back later.";
+      }
+      LogSaurus::log('COMMENT_HIDE_ALL', $_SESSION['user']->customer()->id(), 'COMMERCE', $this->req()->bson);
+    }
+
+    $this->respondTo()->json = function() use ($status, $message) {
+      return ["status" => $status, 'message' => $message];
+    };
+  }
+
+  /**
+   * Ban a user from commenting (moderators only).
+   */
+  public function toggle_banhammer ()
+  {
+    $this->app()->require_authentication();
+    $this->req()->expect('bson');
+    $status = true;
+    $can_comment = 'error';
+    $message = '';
+
+    if(!$_SESSION['user']->customer()->customer_is_moderator) {
+      $status  = false;
+      $message = 'Only moderators can do that.';
+    }
+
+    try {
+      $source_comment = new CustomerCommentSaurus($this->req()->bson);
+      $ban_customer = $source_comment->Customer;
+    } catch (Exception $e) {
+      $status  = false;
+      $message = 'No such comment found.';
+    }
+
+    if($status) {
+      try {
+        $ban_customer->can_comment = ($ban_customer->can_comment ? '0' : '1');
+        $ban_customer->update();
+        $can_comment = ($ban_customer->can_comment ? 'Yep.' : 'NOPE');
+      } catch (Exception $e) {
+        $status = false;
+        $message = "Failed to toggle comment ability for customer #{$ban_customer->getId()}. Try back later.";
+      }
+      LogSaurus::log('COMMENT_BANHAMMER_TOGGLE', $_SESSION['user']->customer()->id(), 'COMMERCE', $this->req()->bson);
+    }
+
+    $this->respondTo()->json = function() use ($status, $message, $can_comment) {
+      return [
+        "status" => $status,
+        'message' => $message,
+        'can_comment' => $can_comment
+      ];
     };
   }
 
@@ -412,7 +510,7 @@ trait CommentHandler {
     $temp->their_comment = $their_comment;
     $temp->alias = $customer->customers_alias;
 
-    $emailer = new SparkEmailer();
+    $emailer = new Mailer();
     $emailer->AddAddress($customer->customers_email_address, $temp->alias);
     $emailer->Subject = "Reply to SparkFun Comment #" . (string) $their_comment->id();
     $emailer->MsgHTML($temp->render());
@@ -422,18 +520,18 @@ trait CommentHandler {
 
   private function send_report ($comment)
   {
-    $naughty_customer = new CustomerSaurus($comment['customer_id']);
+    $reported_customer = new CustomerSaurus($comment['customer_id']);
 
     $from = $_SESSION['user']->customer()->customers_email_address;
     $subject = 'Comment Report';
     $headers = "From: " . $from . "\r\n";
     $body = $_SESSION['user']->customer()->alias() . ' (customer #' . $_SESSION['user']->customer()->id() . ') has reported a comment:';
     $body .= "\n\n" . $_SERVER['HTTP_REFERER'] . "\n\n";
-    $body .= 'The comment in question was posted by customer ' . $naughty_customer->alias() . ' #' . $naughty_customer->id();
+    $body .= 'The comment in question was posted by customer ' . $reported_customer->alias() . ' #' . $reported_customer->id();
     $body .= "\n\n**\n\n";
     $body .= $comment['text'];
 
-    // TODO: use SparkEmailer?
+    // TODO: use \Spark\Mailer?
     if(! mail(constant('\COMMENT_MODERATION_EMAIL'), $subject, $body, $headers)) {
       return [
         'status'  => false,

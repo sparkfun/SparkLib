@@ -75,6 +75,14 @@ class Template extends HTML implements Renderable {
   }
 
   /**
+   * Get a new validator for this template's context array.
+   */
+  public function validator ()
+  {
+    return new \SparkLib\Validator($this->_context);
+  }
+
+  /**
    * If you want a variable accessible inside the template, set it using
    * properties of the template object. A reference to the variable will
    * be extracted as $propertyname.

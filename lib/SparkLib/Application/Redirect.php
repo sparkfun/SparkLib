@@ -6,7 +6,7 @@ class Redirect implements Action {
   protected $_target;
   protected $_code = 302;
 
-  protected static $codes = array(
+  public static $codes = array(
     100 => "HTTP/1.1 100 Continue",
     101 => "HTTP/1.1 101 Switching Protocols",
     200 => "HTTP/1.1 200 OK",

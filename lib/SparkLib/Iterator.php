@@ -53,6 +53,9 @@ abstract class Iterator implements \Iterator {
   /**
    * Map iterator results to an array, using a callback function.
    *
+   * Dubiously, this cannot yet elide or combine elements, but it's
+   * still somewhat useful.
+   *
    * @param callback $function
    * @return array $results
    */
@@ -61,21 +64,10 @@ abstract class Iterator implements \Iterator {
     if (! \is_callable($function))
       throw new InvalidArgumentException('map(): parameter is not a callback.');
 
-    $results = array();
-
-    // handle first/current result
-    $rec = $this->getNext();
-    if (! $rec)
-      return $results;
-    $results[] = call_user_func($function, $rec);
-
-    // handle the rest, if any
-    while ($this->valid()) {
-      $rec = $this->getNext();
-      if ($rec) {
-        $results[] = call_user_func($function, $rec);
-      }
-    }
+    $results = [];
+    $this->each(function ($result) use ($function, &$results) {
+      $results[] = call_user_func($function, $result);
+    });
 
     return $results;
   }

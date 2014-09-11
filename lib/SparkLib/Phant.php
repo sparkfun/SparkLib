@@ -22,10 +22,10 @@ class Phant {
    */
   public function input (array $data)
   {
-    $data['private_key'] = $this->_privhash;
     $postbody = http_build_query($data);
 
     $headers = [
+      "Phant-Private-Key: {$this->_privhash}",
       "Content-type: application/x-www-form-urlencoded",
     ];
 

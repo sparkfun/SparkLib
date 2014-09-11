@@ -29,6 +29,7 @@ class DB {
   public static function False () { return new \SparkLib\DB\False; }
   public static function Null () { return new \SparkLib\DB\Null; }
   public static function Now () { return new \SparkLib\DB\Now; }
+  public static function CurrentDate () { return new \SparkLib\DB\CurrentDate; }
   public static function Random () { return new \SparkLib\DB\Random(\DB_SERVER_TYPE); }
 
   // FUCK YOU, PHP
@@ -168,7 +169,7 @@ class DB {
 
   /**
    * Convenience method for PDO::commit().
-   * 
+   *
    * Commit a database transaction.
    *
    * @returns nothing
@@ -179,7 +180,7 @@ class DB {
 
   /**
    * Convenience method for PDO::rollBack().
-   * 
+   *
    * Rollback a database transaction.
    *
    * @returns nothing
