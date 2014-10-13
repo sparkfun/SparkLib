@@ -58,7 +58,7 @@ class Template extends HTML implements Renderable {
   /**
    * Create a new template.
    *
-   * Optionally takes a template filename and an associative array of 
+   * Optionally takes a template filename and an associative array of
    * variables to be passed into the template.
    *
    * @param string template filename
