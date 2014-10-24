@@ -9,6 +9,7 @@
     }
     ],
     "require": {
+      "php": ">=5.5.17"
     },
     "autoload": {
       "psr-0" : {
