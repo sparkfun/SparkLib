@@ -49,7 +49,7 @@ use Exception,
 
 class Ship {
 
-  private $_wsdl = '/Ship/wsdl/Ship.wsdl';
+  private $_wsdl = UPS_WSDL_SHIP;
   private $_schema = 'http://www.ups.com/XMLSchema/XOLTWS/UPSS/v1.0';
   private $_client;
   private $_options;
@@ -579,7 +579,7 @@ class Ship {
       'location'      => UPS_SERVER_SHIP
     ];
 
-    $wsdl = __DIR__ . $this->_wsdl;
+    $wsdl = $this->_wsdl;
 
     $this->_client = new SoapClient($wsdl, $this->_options);
     $this->_client->__setSoapHeaders($header);

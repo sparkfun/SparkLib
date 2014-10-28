@@ -30,7 +30,7 @@ use SparkLib\Fail;
 
 class Rate {
 
-  private $_wsdl = '/Rate/wsdl/RateWS.wsdl';
+  private $_wsdl = UPS_WSDL_RATE;
   private $_schema = 'http://www.ups.com/XMLSchema/XOLTWS/UPSS/v1.0';
   private $_client;
   private $_options;
@@ -157,7 +157,7 @@ class Rate {
       'trace'        => true
     ];
 
-    $wsdl = __DIR__ . $this->_wsdl;
+    $wsdl = $this->_wsdl;
 
     $this->_client = new SoapClient($wsdl, $this->_options);
     $this->_client->__setSoapHeaders($header);
