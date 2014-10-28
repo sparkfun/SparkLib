@@ -2,6 +2,8 @@
 
 namespace SparkLib\UPS;
 
+use SparkLib\UPS\RateException;
+
 use SparkLib\UPS\Rate\AddressType,
     SparkLib\UPS\Rate\CodeDescriptionType,
     SparkLib\UPS\Rate\DimensionsType,
@@ -165,7 +167,7 @@ class Rate {
     } catch (SoapFault $s) {
       if (isset($s->detail)) {
         $err = $s->detail->Errors->ErrorDetail->PrimaryErrorCode->Description;
-        Fail::log("UPS API Error: $err");
+        throw new RateException($err);
       }
     }
 
