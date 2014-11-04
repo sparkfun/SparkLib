@@ -277,13 +277,19 @@ abstract class Application {
 
     // Override the current controller and validate the new target
     $this->_controller      = $e->controller();
-    $this->_controllerClass = $this->makeControllerName($this->_controller);
+    $this->_controllerClass = $this->makeControllerName($this->_controller, $e->appName());
     $this->_ctl             = new $this->_controllerClass($this);
     $this->_action          = $e->action();
 
     $this->validate();
 
-    $redirect = $this->_ctl->linkAction($this->_action)->redirect(301);
+    if ($e->appName()) {
+      $app_name = $e->appName();
+    } else {
+      $app_name = $this->appName();
+    }
+
+    $redirect = $app_name::externalLink($this->_controller)->action($this->_action)->params($e->params())->redirect(301);
     $redirect->fire();
   }
 
