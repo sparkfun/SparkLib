@@ -303,6 +303,11 @@ class Template extends HTML implements Renderable {
       };
     }
 
+    if (! isset($j)) {
+      $j = function ($var) { return \json_encode(\htmlspecialchars($var)); };
+    }
+
+
     require $filename;
   }
 
