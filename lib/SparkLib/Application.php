@@ -524,15 +524,19 @@ abstract class Application {
    * @param string name of a controller
    * @return string name of a controller class
    */
-  public function makeControllerName ($controller)
+  public function makeControllerName ($controller, $app_name_str = '')
   {
     $parts = explode('_', $controller);
     foreach ($parts as &$part) {
       $part = ucfirst($part);
     }
 
+    if (! $app_name_str) {
+      $app_name_str = get_class($this);
+    }
+
     // this lives in Application\Controller
-    $namespaced = get_class($this) . '\\' . implode('', $parts);
+    $namespaced = $app_name_str . '\\' . implode('', $parts);
 
     // this tells us everything will be namespaced, so we can
     // shortcut right to using that one
@@ -541,7 +545,7 @@ abstract class Application {
 
     // this lives in Application\ApplicationController
     // it is the old way and we hates it
-    $un_namespaced = get_class($this) . implode('', $parts);
+    $un_namespaced = $app_name_str . implode('', $parts);
 
     if (class_exists($un_namespaced)) {
       return $un_namespaced;
