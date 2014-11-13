@@ -157,6 +157,17 @@ class DB {
   }
 
   /**
+   * Convenience method for PDO::inTransaction().
+   *
+   * Indicates whether or not there is an active transaction.
+   *
+   * @return true if there is a transaction, false otherwise.
+   */
+  public static function inTransaction () {
+    return self::pdo()->inTransaction();
+  }
+
+  /**
    * Convenience method for PDO::beginTransaction().
    *
    * Starts a database transaction.
