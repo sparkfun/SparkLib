@@ -1,5 +1,5 @@
 <?php
-namespace SparkLib\UPS;
+namespace SparkLib\UPS\Rate;
 
 use \Exception;
 

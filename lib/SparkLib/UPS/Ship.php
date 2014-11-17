@@ -49,8 +49,8 @@ use Exception,
 
 class Ship {
 
-  private $_wsdl = UPS_WSDL_SHIP;
-  private $_schema = 'http://www.ups.com/XMLSchema/XOLTWS/UPSS/v1.0';
+  private $_wsdl = UPS_SHIP_WSDL;
+  private $_schema = UPS_SCHEMA;
   private $_client;
   private $_options;
   private $_request;
@@ -576,7 +576,7 @@ class Ship {
       'soap_version'  => 'SOAP_1_1',
       'exceptions'    => true,
       'trace'         => true,
-      'location'      => UPS_SERVER_SHIP
+      'location'      => UPS_SHIP_SERVER
     ];
 
     $wsdl = $this->_wsdl;
