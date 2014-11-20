@@ -2,6 +2,7 @@
 namespace SparkLib\Session;
 
 use \Memcache;
+use \SparkLib\Fail;
 
 /**
  * A concrete implementation of session storage in memcached.  Used by
@@ -30,6 +31,7 @@ class MemcachedStore {
 
   public function write ($id, $data)
   {
+    Fail::log(var_export($data, 1));
     // TODO: should this compress?  Do keys expire even with 0 set for expiry?
     return $this->_mc->set($id, $data, false, 0);
   }
