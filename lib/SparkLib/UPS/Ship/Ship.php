@@ -1,45 +1,45 @@
 <?php
 
-namespace SparkLib\UPS;
+namespace SparkLib\UPS\Ship;
 
-use SparkLib\UPS\Ship\AddressType,
-    SparkLib\UPS\Ship\BillShipperType,
-    SparkLib\UPS\Ship\CodeDescriptionType,
-    SparkLib\UPS\Ship\ContactType,
-    SparkLib\UPS\Ship\CurrencyMonetaryType,
-    SparkLib\UPS\Ship\DimensionsType,
-    SparkLib\UPS\Ship\InternationalFormType,
-    SparkLib\UPS\Ship\LabelImageFormatType,
-    SparkLib\UPS\Ship\LabelStockSizeType,
-    SparkLib\UPS\Ship\LabelSpecificationType,
-    SparkLib\UPS\Ship\PackageDeclaredValueType,
-    SparkLib\UPS\Ship\PackageServiceOptionsType,
-    SparkLib\UPS\Ship\PackageType,
-    SparkLib\UPS\Ship\PackageWeightType,
-    SparkLib\UPS\Ship\PaymentInfoType,
-    SparkLib\UPS\Ship\PhoneType,
-    SparkLib\UPS\Ship\ProductType,
-    SparkLib\UPS\Ship\ProducerType,
-    SparkLib\UPS\Ship\ProductWeightType,
-    SparkLib\UPS\Ship\RateInfoType,
-    SparkLib\UPS\Ship\ReferenceNumberType,
-    SparkLib\UPS\Ship\RequestType,
-    SparkLib\UPS\Ship\ServiceAccessToken,
-    SparkLib\UPS\Ship\ServiceType,
-    SparkLib\UPS\Ship\ShipperType,
-    SparkLib\UPS\Ship\ShipAddressType,
-    SparkLib\UPS\Ship\ShipFromType,
-    SparkLib\UPS\Ship\ShipToType,
-    SparkLib\UPS\Ship\ShipmentChargeType,
-    SparkLib\UPS\Ship\ShipmentType,
-    SparkLib\UPS\Ship\ShipmentRequest,
-    SparkLib\UPS\Ship\ShipmentServiceOptionsType,
-    SparkLib\UPS\Ship\SoldToType,
-    SparkLib\UPS\Ship\UltimateConsigneeType,
-    SparkLib\UPS\Ship\UnitOfMeasurementType,
-    SparkLib\UPS\Ship\UnitType,
-    SparkLib\UPS\Ship\UPSSecurity,
-    SparkLib\UPS\Ship\UsernameToken;
+use SparkLib\UPS\Ship\SchemaType\AddressType,
+    SparkLib\UPS\Ship\SchemaType\BillShipperType,
+    SparkLib\UPS\Ship\SchemaType\CodeDescriptionType,
+    SparkLib\UPS\Ship\SchemaType\ContactType,
+    SparkLib\UPS\Ship\SchemaType\CurrencyMonetaryType,
+    SparkLib\UPS\Ship\SchemaType\DimensionsType,
+    SparkLib\UPS\Ship\SchemaType\InternationalFormType,
+    SparkLib\UPS\Ship\SchemaType\LabelImageFormatType,
+    SparkLib\UPS\Ship\SchemaType\LabelStockSizeType,
+    SparkLib\UPS\Ship\SchemaType\LabelSpecificationType,
+    SparkLib\UPS\Ship\SchemaType\PackageDeclaredValueType,
+    SparkLib\UPS\Ship\SchemaType\PackageServiceOptionsType,
+    SparkLib\UPS\Ship\SchemaType\PackageType,
+    SparkLib\UPS\Ship\SchemaType\PackageWeightType,
+    SparkLib\UPS\Ship\SchemaType\PaymentInfoType,
+    SparkLib\UPS\Ship\SchemaType\PhoneType,
+    SparkLib\UPS\Ship\SchemaType\ProductType,
+    SparkLib\UPS\Ship\SchemaType\ProducerType,
+    SparkLib\UPS\Ship\SchemaType\ProductWeightType,
+    SparkLib\UPS\Ship\SchemaType\RateInfoType,
+    SparkLib\UPS\Ship\SchemaType\ReferenceNumberType,
+    SparkLib\UPS\Ship\SchemaType\RequestType,
+    SparkLib\UPS\Ship\SchemaType\ServiceAccessToken,
+    SparkLib\UPS\Ship\SchemaType\ServiceType,
+    SparkLib\UPS\Ship\SchemaType\ShipperType,
+    SparkLib\UPS\Ship\SchemaType\ShipAddressType,
+    SparkLib\UPS\Ship\SchemaType\ShipFromType,
+    SparkLib\UPS\Ship\SchemaType\ShipToType,
+    SparkLib\UPS\Ship\SchemaType\ShipmentChargeType,
+    SparkLib\UPS\Ship\SchemaType\ShipmentType,
+    SparkLib\UPS\Ship\SchemaType\ShipmentRequest,
+    SparkLib\UPS\Ship\SchemaType\ShipmentServiceOptionsType,
+    SparkLib\UPS\Ship\SchemaType\SoldToType,
+    SparkLib\UPS\Ship\SchemaType\UltimateConsigneeType,
+    SparkLib\UPS\Ship\SchemaType\UnitOfMeasurementType,
+    SparkLib\UPS\Ship\SchemaType\UnitType,
+    SparkLib\UPS\Ship\SchemaType\UPSSecurity,
+    SparkLib\UPS\Ship\SchemaType\UsernameToken;
 
 use Exception,
     SoapClient,
@@ -49,30 +49,29 @@ use Exception,
 
 class Ship {
 
-  private $_wsdl = UPS_SHIP_WSDL;
-  private $_schema = UPS_SCHEMA;
+  private $_schema    = UPS_SCHEMA;
+  private $_wsdl      = UPS_SHIP_WSDL;
+  private $_endpoint  = UPS_SHIP_SERVER;
+  private $_user      = UPS_USERID;
+  private $_pass      = UPS_USERPASS;
+  private $_apikey    = UPS_APIKEY;
+
   private $_client;
-  private $_options;
   private $_request;
   private $_response;
-  private $_destination;
 
-  private $_lineItems;
-  private $_serviceType;
+  private $_destination;
+  private $_PAK;
+  private $_shippingMethod;
   private $_shipper;
-  private $_international;
-  private $_PAK = false;
   private $_shipFrom;
   private $_shipTo;
-  private $_shipmentMethod;
   private $_payment;
-  private $_label;
-  private $_totalValue;
+
   private $_package;
   private $_packages = [];
   private $_products = [];
-
-  private $_rates = [];
+  private $_totalValue = 0;
 
   public $upsCodes = [
     1 => 'Next Day Air',
@@ -86,7 +85,8 @@ class Ship {
     14 => 'Next Day Air Early AM',
     59 => '2nd Day Air AM',
     54 => 'Worldwide Express Plus',
-    65 => 'UPS Saver'
+    65 => 'UPS Saver',
+    93 => 'UPS SurePost'
   ];
 
   public function __construct() {
@@ -96,11 +96,21 @@ class Ship {
 
     $this->_request = new ShipmentRequest($Request, $Shipment, $LabelSpecification);
 
-    $this->_totalValue = 0;
+    $this->_destination = null;
+    $this->_PAK         = false;
+    $this->_totalValue  = 0;
+
   }
 
-  public function setDestination($dest) {
-    $this->_destination = $dest;
+  public function intl() {
+
+    if ($this->_destination === null)
+      throw new Exception('Ship to address not set');
+
+    if ($this->_destination == 'US')
+      return false;
+
+    return true;
   }
 
   public function allowPakRates() {
@@ -117,15 +127,12 @@ class Ship {
     if ($this->_package == null)
       throw new Exception ('Create package before setting size.');
 
-    if ($this->_international === null)
-      throw new Exception ('Set shipment destination before adding packages');
-
     $weight = $this->_package->PackageWeight->Weight;
 
     if (! isset($weight))
       throw new Exception ('Set package weight before setting size');
 
-    if ($this->_PAK && $this->_international && $weight <= constant('\PAK_RATE_THRESHOLD')) {
+    if ($this->_PAK && $this->intl()) {
       $this->_package->setPackaging(new CodeDescriptionType('04'));
     } else {
       $this->_package->setPackaging(new CodeDescriptionType('02'));
@@ -150,6 +157,7 @@ class Ship {
     if ($this->_package == null)
       throw new Exception ('Create package before setting value.');
 
+if ($this->intl()) {
     $DeclaredValue = new PackageDeclaredValueType();
     $DeclaredValue->setCurrencyCode('USD');
 
@@ -161,7 +169,7 @@ class Ship {
     $PackageServiceOptions = new PackageServiceOptionsType();
     $PackageServiceOptions->setDeclaredValue($DeclaredValue);
 
-    $this->_package->setPackageServiceOptions($PackageServiceOptions);
+    $this->_package->setPackageServiceOptions($PackageServiceOptions);}
   }
 
   public function setReferenceNumber($num) {
@@ -170,7 +178,7 @@ class Ship {
     $ReferenceNumber->setValue($num);
     $ReferenceNumber->setBarCodeIndicator(true);
 
-    if ($this->_international) {
+    if ($this->intl()) {
       $this->_request->Shipment->setReferenceNumber($ReferenceNumber);
     } else if (count($this->_packages) == 0) {
       throw new Exception ('Add packages before setting reference number.');
@@ -220,20 +228,24 @@ class Ship {
   public function setShipperAddress($street, $city, $state, $postal,
                                     $country, $account) {
     $this->initShipper();
-    $this->initForms();
 
     $address = new ShipAddressType($street, $city, $state, $postal, $country);
 
     $this->_shipper->setAddress($address);
     $this->_shipper->setShipperNumber($account);
 
-    $Address = new AddressType($street, $city, $state, null, $postal, $country);
-    $this->_request->Shipment
-                   ->ShipmentServiceOptions
-                   ->InternationalForms
-                   ->Contacts
-                   ->Producer
-                   ->setAddress($Address);
+    if ($this->intl()) {
+      $this->initForms();
+
+      $Address = new AddressType($street, $city, $state, null, $postal, $country);
+
+      $this->_request->Shipment
+                     ->ShipmentServiceOptions
+                     ->InternationalForms
+                     ->Contacts
+                     ->Producer
+                     ->setAddress($Address);
+    }
   }
 
   public function setShipperPhone($phone) {
@@ -245,36 +257,22 @@ class Ship {
 
   public function setShipperName($name, $company = null) {
     $this->initShipper();
-    $this->initForms();
 
-    if ($company) {
-      $this->_shipper->setName($company);
-      $this->_shipper->setAttentionName($name);
-      $this->_shipper->setCompanyDisplayableName($company);
+    $name = substr($name, 0, 35);
+    $company = $company ? substr($company, 0, 35) : $name;
 
+    $this->_shipper->setName($company);
+    $this->_shipper->setAttentionName($name);
+    $this->_shipper->setCompanyDisplayableName($company);
+
+    if ($this->intl()) {
+      $this->initForms();
       $this->_request->Shipment
                      ->ShipmentServiceOptions
                      ->InternationalForms
                      ->Contacts
                      ->Producer
                      ->setCompanyName($company);
-      $this->_request->Shipment
-                     ->ShipmentServiceOptions
-                     ->InternationalForms
-                     ->Contacts
-                     ->Producer
-                     ->setAttentionName($name);
-    } else {
-      $this->_shipper->setName($name);
-      $this->_shipper->setAttentionName($name);
-      $this->_shipper->setCompanyDisplayableName($name);
-
-      $this->_request->Shipment
-                     ->ShipmentServiceOptions
-                     ->InternationalForms
-                     ->Contacts
-                     ->Producer
-                     ->setCompanyName($name);
       $this->_request->Shipment
                      ->ShipmentServiceOptions
                      ->InternationalForms
@@ -317,17 +315,14 @@ class Ship {
   }
 
   public function setShipFromName($name, $company = null) {
+    $name = substr($name, 0, 35);
+    $company = $company ? substr($company, 0, 35) : $name;
+
     $this->initShipFrom();
 
-    if ($company) {
-      $this->_shipFrom->setName($company);
-      $this->_shipFrom->setAttentionName($name);
-      $this->_shipFrom->setCompanyDisplayableName($company);
-    } else {
-      $this->_shipFrom->setName($name);
-      $this->_shipFrom->setAttentionName($name);
-      $this->_shipFrom->setCompanyDisplayableName($name);
-    }
+    $this->_shipFrom->setName($company);
+    $this->_shipFrom->setAttentionName($name);
+    $this->_shipFrom->setCompanyDisplayableName($company);
   }
 
   public function setShipFromTaxID($taxId) {
@@ -344,19 +339,18 @@ class Ship {
   }
 
   public function setShipToAddress($street, $city, $state, $postal, $country) {
-    $this->initShipTo();
-    $this->initForms();
+    if (! CountryCodes::valid($country))
+      throw new Exception('Invalid country code');
+
+    $this->_destination = $country;
 
     // Do some really basic validation on the postal code
     if ($country == 'US') {
       $postal = substr(preg_replace('/[^0-9]+/', '', $postal), 0, 5);
-      $this->_international = false;
     } else if ($country == 'CA') {
       $postal = substr(preg_replace('/[^0-9A-Za-z]+/', '', $postal), 0, 6);
-      $this->_international = true;
     } else {
       $postal = substr(preg_replace('/[^0-9A-Za-z]+/', '', $postal), 0, 9);
-      $this->_international = true;
     }
 
     // Street cannot be more than 35 characters long
@@ -373,24 +367,30 @@ class Ship {
     else if (! ($country == 'US' || $country == 'CA'))
       $state = null;
 
+    $this->initShipTo();
+
     $ShipAddress = new ShipAddressType($street, $city, $state, $postal, $country);
     $this->_shipTo->setAddress($ShipAddress);
 
-    $UltimateConsigneeAddress = new AddressType($street, $city, $state, null, $postal, $country);
-    $this->_request->Shipment
-                   ->ShipmentServiceOptions
-                   ->InternationalForms
-                   ->Contacts
-                   ->UltimateConsignee
-                   ->setAddress($UltimateConsigneeAddress);
+    if ($this->intl()) {
+      $this->initForms();
 
-    $SoldToAddress = new AddressType($street, $city, $state, null, $postal, $country);
-    $this->_request->Shipment
-                   ->ShipmentServiceOptions
-                   ->InternationalForms
-                   ->Contacts
-                   ->SoldTo
-                   ->setAddress($SoldToAddress);
+      $UltimateConsigneeAddress = new AddressType($street, $city, $state, null, $postal, $country);
+      $this->_request->Shipment
+                     ->ShipmentServiceOptions
+                     ->InternationalForms
+                     ->Contacts
+                     ->UltimateConsignee
+                     ->setAddress($UltimateConsigneeAddress);
+
+      $SoldToAddress = new AddressType($street, $city, $state, null, $postal, $country);
+      $this->_request->Shipment
+                     ->ShipmentServiceOptions
+                     ->InternationalForms
+                     ->Contacts
+                     ->SoldTo
+                     ->setAddress($SoldToAddress);
+    }
   }
 
   public function setShipToPhone($phone) {
@@ -404,16 +404,16 @@ class Ship {
 
   public function setShipToName($name, $company = null) {
     $this->initShipTo();
-    $this->initForms();
 
     $name = substr($name, 0, 35);
+    $company = $company ? substr($company, 0, 35) : $name;
 
-    if ($company) {
-      $company = substr($company, 0, 35);
+    $this->_shipTo->setName($company);
+    $this->_shipTo->setAttentionName($name);
+    $this->_shipTo->setCompanyDisplayableName($company);
 
-      $this->_shipTo->setName($company);
-      $this->_shipTo->setAttentionName($name);
-      $this->_shipTo->setCompanyDisplayableName($company);
+    if ($this->intl()) {
+      $this->initForms();
       $this->_request->Shipment
                      ->ShipmentServiceOptions
                      ->InternationalForms
@@ -432,29 +432,8 @@ class Ship {
                      ->Contacts
                      ->SoldTo
                      ->setAttentionName($name);
-    } else {
-      $this->_shipTo->setName($name);
-      $this->_shipTo->setAttentionName($name);
-      $this->_shipTo->setCompanyDisplayableName($name);
-      $this->_request->Shipment
-                     ->ShipmentServiceOptions
-                     ->InternationalForms
-                     ->Contacts
-                     ->UltimateConsignee
-                     ->setCompanyName($name);
-      $this->_request->Shipment
-                     ->ShipmentServiceOptions
-                     ->InternationalForms
-                     ->Contacts
-                     ->SoldTo
-                     ->setName($name);
-      $this->_request->Shipment
-                     ->ShipmentServiceOptions
-                     ->InternationalForms
-                     ->Contacts
-                     ->SoldTo
-                     ->setAttentionName($name);
     }
+
   }
 
   public function setShipToEmail($email) {
@@ -471,12 +450,11 @@ class Ship {
   }
 
   public function setShippingMethod($serviceCode) {
-    $this->_serviceType = new ServiceType($serviceCode);
+    $this->_shippingMethod = $serviceCode;
   }
 
   private function initForms() {
-    if (!isset($this->_request->Shipment->ShipmentServiceOptions->InternationalForms)) {
-
+    if (! isset($this->_request->Shipment->ShipmentServiceOptions->InternationalForms)) {
       $Producer           = new ProducerType();
       $UltimateConsignee  = new UltimateConsigneeType();
       $SoldTo             = new SoldToType();
@@ -500,30 +478,25 @@ class Ship {
   }
 
   public function setInvoice($date = null, $number = '') {
-    $this->initForms();
+    if ($this->intl()) {
+      $this->initForms();
 
-    if ($date == null)
-      $date = date('Ymd');
-    else if (is_string($date))
-      $date = date('Ymd', strtotime($date));
-    else
-      $date = date('Ymd', $date);
+      if ($date == null)
+        $date = date('Ymd');
+      else if (is_string($date))
+        $date = date('Ymd', strtotime($date));
+      else
+        $date = date('Ymd', $date);
 
-
-    $InternationalForm = new InternationalFormType();
-    $InternationalForm->setFormType('01');
-
-    $ShipmentServiceOptions = new ShipmentServiceOptionsType();
-    $ShipmentServiceOptions->setInternationalForms($InternationalForm);
-
-    $this->_request->Shipment
-                   ->ShipmentServiceOptions
-                   ->InternationalForms
-                   ->setInvoiceDate($date);
-    $this->_request->Shipment
-                   ->ShipmentServiceOptions
-                   ->InternationalForms
-                   ->setInvoiceNumber($number);
+      $this->_request->Shipment
+                     ->ShipmentServiceOptions
+                     ->InternationalForms
+                     ->setInvoiceDate($date);
+      $this->_request->Shipment
+                     ->ShipmentServiceOptions
+                     ->InternationalForms
+                     ->setInvoiceNumber($number);
+    }
   }
 
   public function useNegotiatedRates() {
@@ -545,19 +518,23 @@ class Ship {
 
     $this->_request->Request->setRequestOption('validate');
 
-    $this->initForms();
 
-    $this->_request->Shipment->setService($this->_serviceType);
+    $this->_request->Shipment->setService(new ServiceType($this->_shippingMethod));
     $this->_request->Shipment->setDescription('Electronics');
     $this->_request->Shipment->setShipper($this->_shipper);
     $this->_request->Shipment->setShipFrom($this->_shipFrom);
     $this->_request->Shipment->setShipTo($this->_shipTo);
     $this->_request->Shipment->setPackage($this->_packages);
     $this->_request->Shipment->setPaymentInformation($this->_payment);
-    $this->_request->Shipment
-                   ->ShipmentServiceOptions
-                   ->InternationalForms
-                   ->setProduct($this->_products);
+
+    if ($this->intl()) {
+      $this->initForms();
+
+      $this->_request->Shipment
+                     ->ShipmentServiceOptions
+                     ->InternationalForms
+                     ->setProduct($this->_products);
+    }
 
     $this->setTotal();
 
@@ -565,27 +542,25 @@ class Ship {
     $ServiceAccessToken = new ServiceAccessToken();
     $UPSSecurity        = new UPSSecurity($UsernameToken, $ServiceAccessToken);
 
-    $UsernameToken->setUsername(UPS_USERID);
-    $UsernameToken->setPassword(UPS_USERPASS);
+    $UsernameToken->setUsername($this->_user);
+    $UsernameToken->setPassword($this->_pass);
 
-    $ServiceAccessToken->setAccessLicenseNumber(UPS_APIKEY);
+    $ServiceAccessToken->setAccessLicenseNumber($this->_apikey);
 
     $header = new SoapHeader($this->_schema, 'UPSSecurity', $UPSSecurity);
 
-    $this->_options = [
+    $options = [
       'soap_version'  => 'SOAP_1_1',
       'exceptions'    => true,
       'trace'         => true,
-      'location'      => UPS_SHIP_SERVER
+      'location'      => $this->_endpoint
     ];
 
-    $wsdl = $this->_wsdl;
-
-    $this->_client = new SoapClient($wsdl, $this->_options);
+    $this->_client = new SoapClient($this->_wsdl, $options);
     $this->_client->__setSoapHeaders($header);
 
     try {
-      $this->_response = $this->_client->ProcessShipment($this->_request, $this->_options);
+      $this->_response = $this->_client->ProcessShipment($this->_request, $options);
     } catch (SoapFault $s) {
       if (isset($s->detail)) {
         $err = $s->detail->Errors->ErrorDetail->PrimaryErrorCode->Description;

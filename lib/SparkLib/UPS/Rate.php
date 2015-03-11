@@ -2,8 +2,6 @@
 
 namespace SparkLib\UPS;
 
-use SparkLib\UPS\RateException;
-
 use SparkLib\UPS\Rate\AddressType,
     SparkLib\UPS\Rate\CodeDescriptionType,
     SparkLib\UPS\Rate\DimensionsType,
@@ -12,6 +10,7 @@ use SparkLib\UPS\Rate\AddressType,
     SparkLib\UPS\Rate\PackageType,
     SparkLib\UPS\Rate\PackageWeightType,
     SparkLib\UPS\Rate\ServiceAccessToken,
+    SparkLib\UPS\Rate\RateException,
     SparkLib\UPS\Rate\RateRequest,
     SparkLib\UPS\Rate\RequestType,
     SparkLib\UPS\Rate\ShipperType,
@@ -30,8 +29,8 @@ use SparkLib\Fail;
 
 class Rate {
 
-  private $_wsdl = UPS_WSDL_RATE;
-  private $_schema = 'http://www.ups.com/XMLSchema/XOLTWS/UPSS/v1.0';
+  private $_wsdl = UPS_RATE_WSDL;
+  private $_schema = UPS_SCHEMA;
   private $_client;
   private $_options;
   private $_request;
@@ -153,7 +152,7 @@ class Rate {
     $this->_options = [
       'soap_version' => 'SOAP_1_1',
       'exceptions'   => true,
-      'location'     => UPS_SERVER_RATE,
+      'location'     => UPS_RATE_SERVER,
       'trace'        => true
     ];
 

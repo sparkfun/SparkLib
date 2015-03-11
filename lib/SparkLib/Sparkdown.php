@@ -92,6 +92,19 @@ class Sparkdown {
   }
 
   /**
+   * Set a callback for nofollow attributes on links
+   *
+   * @return Sparkdown
+   */
+  public function setNoFollow ()
+  {
+    $this->_md->setAttributesCallback(function () {
+      return $this->attributesCallback(['rel' => 'nofollow']);
+    });
+    return $this;
+  }
+
+  /**
    * Return a path for special shorthand in links.
    *
    * New link shorthand should be defined here, following the pattern
@@ -109,6 +122,27 @@ class Sparkdown {
     }
 
     // we didn't find anything
+    return null;
+  }
+
+  /**
+   * Return a rel=nofollow for links
+   *
+   * An example hook for this can be seen at setNoFollow().
+   */
+  protected function attributesCallback ($attributes)
+  {
+    if (is_array($attributes)) {
+      $attr_str = '';
+      foreach($attributes as $k => $v) {
+        $attr_str .= $k . '="' . $v . '" ';
+      }
+      return $attr_str;
+    } else if (is_string($attributes)) {
+      return $attributes;
+    }
+
+    // unknown attribute type
     return null;
   }
 
