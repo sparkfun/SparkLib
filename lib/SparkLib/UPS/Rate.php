@@ -29,10 +29,17 @@ use SparkLib\Fail;
 
 class Rate {
 
-  private $_wsdl = UPS_RATE_WSDL;
-  private $_schema = UPS_SCHEMA;
+  const REQ_SHOP = 1;
+  const REQ_RATE = 2;
+
+  private $_schema    = UPS_SCHEMA;
+  private $_wsdl      = UPS_RATE_WSDL;
+  private $_endpoint  = UPS_RATE_SERVER;
+  private $_user      = UPS_USERID;
+  private $_pass      = UPS_USERPASS;
+  private $_apikey    = UPS_APIKEY;
+
   private $_client;
-  private $_options;
   private $_request;
   private $_response;
 
@@ -40,18 +47,17 @@ class Rate {
   private $_shipFrom;
   private $_shipTo;
   private $_shipment;
-  private $_international = false;
-  private $_PAK = false;
-  private $_packages = [];
-  private $_requestedServices = [];
 
-  private $_rates = [];
+  private $_international;
+  private $_pakRates;
+  private $_packages;
+  private $_service;
 
-  public $upsCodes = [
+  private static $upsServices = [
     1 => 'Next Day Air',
     2 => '2nd Day Air',
     3 => 'Ground',
-    7 => 'Worldwide Express Saver',
+    7 => 'Worldwide Express',
     8 => 'Worldwide Expedited',
     11 => 'Standard',
     12 => '3 Day Select',
@@ -59,20 +65,35 @@ class Rate {
     14 => 'Next Day Air Early AM',
     59 => '2nd Day Air AM',
     54 => 'Worldwide Express Plus',
-    65 => 'UPS Saver'
+    65 => 'UPS Saver',
+    93 => 'UPS SurePost',
+    82 => 'UPS Today Standard',
+    83 => 'UPS Today Dedicated Courier',
+    84 => 'UPS Today Intercity',
+    85 => 'UPS Today Express',
+    86 => 'UPS Today Express Saver',
+    96 => 'UPS Worldwide Express Freight',
   ];
 
   public function __construct() {
     $shipmentOptions = new ShipmentRatingOptionsType("Yes", null, null);
     $this->_shipment = new ShipmentType();
     $this->_shipment->setShipmentRatingOptions($shipmentOptions);
+
+    $this->_international = false;
+    $this->_pakRatesRates = false;
+    $this->_packages      = [];
   }
 
-  public function addServices() {
+  public function addService($serviceCode) {
+    if (! array_key_exists($serviceCode, static::$upsServices))
+      throw new RateException('Invalid service code');
+
+    $this->_service = $serviceCode;
   }
 
   public function allowPakRates() {
-    $this->_PAK = true;
+    $this->_pakRates = true;
   }
 
   public function addPackage($l, $w, $h, $weight, $value = null, $units_length = 'IN',
@@ -84,7 +105,7 @@ class Rate {
       new PackageWeightType(new CodeDescriptionType($units_weight), $weight)
     );
 
-    if ($this->_PAK && $weight <= constant('\PAK_RATE_THRESHOLD') && $this->_international) {
+    if ($this->_pakRates && $this->_international) {
       $package->setPackagingType(new CodeDescriptionType('04'));
       $InvoiceLineTotal = new InvoiceLineTotalType('USD', $value);
       $this->_shipment->setInvoiceLineTotal($InvoiceLineTotal);
@@ -134,7 +155,14 @@ class Rate {
     $this->_shipment->setShipTo($this->_shipTo);
     $this->_shipment->setPackage($this->_packages);
 
-    $RequestType = new RequestType('Shop');
+    if ($this->_service === null) {
+      $RequestType = new RequestType('Shop');
+    } else {
+      $RequestType = new RequestType('Rate');
+      $ServiceType = new CodeDescriptionType($this->_service);
+      $this->_shipment->setService($ServiceType);
+    }
+
     $this->_request = new RateRequest($RequestType, new CodeDescriptionType('01'),
                                       null, $this->_shipment);
 
@@ -142,27 +170,25 @@ class Rate {
     $ServiceAccessToken = new ServiceAccessToken();
     $UPSSecurity        = new UPSSecurity($UsernameToken, $ServiceAccessToken);
 
-    $UsernameToken->setUsername(UPS_USERID);
-    $UsernameToken->setPassword(UPS_USERPASS);
+    $UsernameToken->setUsername($this->_user);
+    $UsernameToken->setPassword($this->_pass);
 
-    $ServiceAccessToken->setAccessLicenseNumber(UPS_APIKEY);
+    $ServiceAccessToken->setAccessLicenseNumber($this->_apikey);
 
     $header = new SoapHeader($this->_schema, 'UPSSecurity', $UPSSecurity);
 
-    $this->_options = [
+    $options = [
       'soap_version' => 'SOAP_1_1',
       'exceptions'   => true,
-      'location'     => UPS_RATE_SERVER,
+      'location'     => $this->_endpoint,
       'trace'        => true
     ];
 
-    $wsdl = $this->_wsdl;
-
-    $this->_client = new SoapClient($wsdl, $this->_options);
+    $this->_client = new SoapClient($this->_wsdl, $options);
     $this->_client->__setSoapHeaders($header);
 
     try {
-      $this->_response = $this->_client->ProcessRate($this->_request, $this->_options);
+      $this->_response = $this->_client->ProcessRate($this->_request, $options);
     } catch (SoapFault $s) {
       if (isset($s->detail)) {
         $err = $s->detail->Errors->ErrorDetail->PrimaryErrorCode->Description;
@@ -196,31 +222,44 @@ class Rate {
     }
   }
 
-  public function getRate($rate_code) {
-
-  }
-
   public function getRates() {
 
-    if ($this->_response) {
-      $rates = $this->_response->RatedShipment;
+    if ($this->_service === null && $this->_response) {
+      $rates = [];
 
-      foreach ($rates as $rate) {
-        $rateArr = [];
-
+      foreach ($this->_response->RatedShipment as $rate) {
+        $r = [];
         $code = intval($rate->Service->Code);
-        $rateArr['code']    = $code;
-        $rateArr['service'] = $this->upsCodes[$code];
-        $rateArr['charge']  = floatval($rate->TotalCharges->MonetaryValue);
-        $rateArr['negotiated_charge']  = floatval($rate->NegotiatedRateCharges->TotalCharge->MonetaryValue);
 
+        $r['code']    = $code;
+        $r['service'] = static::getAPIDisplayName($code);
+        $r['charge']  = floatval($rate->TotalCharges->MonetaryValue);
+        $r['negotiated_charge']  = floatval($rate->NegotiatedRateCharges->TotalCharge->MonetaryValue);
 
-        array_push($this->_rates, $rateArr);
+        array_push($rates, $r);
       }
+
+      return $rates;
+    } else if ($this->_response) {
+      return $this->getRate();
     }
+  }
 
-    return $this->_rates;
+  public function getRate() {
+    if ($this->_service !== null && $this->_response) {
+      return [[
+        'code' => $this->_service,
+        'service' => static::getAPIDisplayName($this->_service),
+        'charge' => $this->_response->RatedShipment->TotalCharges->MonetaryValue,
+        'negotiated_charge' => $this->_response->RatedShipment->NegotiatedRateCharges->TotalCharge->MonetaryValue
+      ]];
+    }
+  }
 
+  public static function getAPIDisplayName($ups_code) {
+    if (array_key_exists($ups_code, static::$upsServices))
+      return static::$upsServices[$ups_code];
+    return 'Unknown';
   }
 
 }
