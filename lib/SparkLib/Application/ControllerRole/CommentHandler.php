@@ -4,9 +4,11 @@ namespace SparkLib\Application\ControllerRole;
 use \Spark\Mailer;
 
 use \SparkLib\Application\Redirect,
+    \SparkLib\DB,
     \SparkLib\Template;
 
 use \CustomerCommentSaurus,
+    \CommentBlacklistSaurus,
     \CustomerSaurus,
     \LogSaurus;
 
@@ -159,18 +161,25 @@ trait CommentHandler {
         $comment->visible = $parent_comment->visible;
       }
 
-      // TODO: should this be $comment->insert() instead ?
-      if(! $mongo->comments->insert($comment->getRecord())) {
-        $status = false;
-        $message = 'Error saving comment, please try again later.';
-      } else {
-        LogSaurus::log('COMMENT_POST', $_SESSION['user']->customer()->id(), 'COMMERCE', $comment->id());
-      }
+      $bl_results = DB::fetchAll("select * from comment_blacklists where :term ~* regex_needle", ['term' => $this->req()->text]);
+      $blacklisted = count($bl_results) > 0;
 
-      // assuming we saved that correctly, let's notify whoever wants to know about
-      // this comment being posted
-      if ($status) {
-        $comment->queueNotification();
+      if (!$blacklisted) {
+        // TODO: should this be $comment->insert() instead ?
+        if(! $mongo->comments->insert($comment->getRecord())) {
+          $status = false;
+          $message = 'Error saving comment, please try again later.';
+        } else {
+          LogSaurus::log('COMMENT_POST', $_SESSION['user']->customer()->id(), 'COMMERCE', $comment->id());
+        }
+
+        // assuming we saved that correctly, let's notify whoever wants to know about
+        // this comment being posted
+        if ($status) {
+          $comment->queueNotification();
+        }
+      } else {
+        LogSaurus::log('COMMENT_POST_BLACKLISTED', $_SESSION['user']->customer()->id(), 'COMMERCE', $this->req()->text);
       }
 
     }

@@ -96,9 +96,10 @@ class Ship {
 
     $this->_request = new ShipmentRequest($Request, $Shipment, $LabelSpecification);
 
-    $this->_destination = null;
-    $this->_PAK         = false;
-    $this->_totalValue  = 0;
+    $this->_destination     = null;
+    $this->_PAK             = false;
+    $this->_totalValue      = 0;
+    $this->_shippingMethod  = null;
 
   }
 
@@ -174,11 +175,16 @@ if ($this->intl()) {
 
   public function setReferenceNumber($num) {
 
+    if ($this->_shippingMethod === null)
+      throw new Exception ('Set shipping method before setting a reference number.');
+
     $ReferenceNumber = new ReferenceNumberType();
     $ReferenceNumber->setValue($num);
     $ReferenceNumber->setBarCodeIndicator(true);
 
-    if ($this->intl()) {
+    if ($this->_shippingMethod >= 92 && $this->_shippingMethod <= 94) {
+      return; // Reference numbers on SurePost labels break the label.
+    } else if ($this->intl()) {
       $this->_request->Shipment->setReferenceNumber($ReferenceNumber);
     } else if (count($this->_packages) == 0) {
       throw new Exception ('Add packages before setting reference number.');
