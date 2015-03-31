@@ -41,7 +41,7 @@ class PostgresStore {
 
   public function read ($id)
   {
-    $q = 'SELECT session_data, date_created FROM sessions WHERE session_id = :sessid FOR UPDATE';
+    $q = 'SELECT data FROM sessions WHERE id = :sessid FOR UPDATE';
     $sth = $this->_dbh->prepare($q);
 
     $success = $sth->execute(['sessid' => $id]);
@@ -53,7 +53,7 @@ class PostgresStore {
 
       // PDO should be giving us a file resource here - has to be treated
       // as such.
-      return fgets($values['session_data']);
+      return fgets($values['data']);
     }
 
     return "";
@@ -62,9 +62,9 @@ class PostgresStore {
   public function write ($id, $data)
   {
     if ($this->_found_existing) {
-      $q = 'UPDATE sessions SET session_data = :session_data WHERE session_id = :sessid';
+      $q = 'UPDATE sessions SET data = :sessdata WHERE id = :sessid';
     } else {
-      $q = 'INSERT INTO sessions (session_id, session_data) VALUES(:sessid, :session_data)';
+      $q = 'INSERT INTO sessions (id, data) VALUES(:sessid, :sessdata)';
     }
 
     $sth = $this->_dbh->prepare($q);
@@ -73,7 +73,7 @@ class PostgresStore {
     // PARAM_LOB: Large Object Binary - inserting into a bytea field, which is
     // sorta like a blob - have to do this because the serialized session data
     // contains null bytes:
-    $sth->bindParam(':session_data', $data, PDO::PARAM_LOB);
+    $sth->bindParam(':sessdata', $data, PDO::PARAM_LOB);
 
     $success = $sth->execute();
 
@@ -91,7 +91,7 @@ class PostgresStore {
 
   public function destroy ($id)
   {
-    $q = 'DELETE FROM sessions WHERE session_id = :sessid;';
+    $q = 'DELETE FROM sessions WHERE id = :sessid;';
     $sth = $this->_dbh->prepare($q);
     
     $success = $sth->execute(['sessid' => $id]);
