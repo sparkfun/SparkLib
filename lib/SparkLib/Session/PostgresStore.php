@@ -105,8 +105,11 @@ class PostgresStore {
 
   public function gc ($maxlifetime)
   {
-    // DO NOTHING AT ALL
-    return true;
+    $sth = $this->_dbh->prepare('delete from sessions where extract(EPOCH from (clock_timestamp() - ts))::integer > ?');
+
+    $success = $sth->execute([$maxlifetime]);
+
+    return $success;
   }
 
 }
