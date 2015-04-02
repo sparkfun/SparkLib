@@ -62,7 +62,7 @@ class PostgresStore {
   public function write ($id, $data)
   {
     if ($this->_found_existing) {
-      $q = 'UPDATE sessions SET data = :sessdata WHERE id = :sessid';
+      $q = "UPDATE sessions SET data = :sessdata, ts_last_activity = 'now' WHERE id = :sessid";
     } else {
       $q = 'INSERT INTO sessions (id, data) VALUES(:sessid, :sessdata)';
     }
@@ -105,7 +105,14 @@ class PostgresStore {
 
   public function gc ($maxlifetime)
   {
-    $sth = $this->_dbh->prepare('delete from sessions where extract(EPOCH from (clock_timestamp() - ts))::integer > ?');
+    $sth = $this->_dbh->prepare("
+      delete from sessions where true
+
+      -- leave sessions that have activity within the last 2 hours
+      and extract(EPOCH from (clock_timestamp() - ts_last_activity)) < 7200
+
+      and extract(EPOCH from (clock_timestamp() - ts_created))::integer > ?
+    ");
 
     $success = $sth->execute([$maxlifetime]);
 
