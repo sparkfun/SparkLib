@@ -23,6 +23,13 @@ use \SparkLib\Fail;
 class DB {
 
   /**
+   * These are the maximum allowable values for integer and biginteger types, respectively.
+   *
+   */
+  const MAX_INT_KEY = 2147483647;             // 2^31 - 1
+  const MAX_BIGINT_KEY = 9223372036854775807; // 2^63 - 1
+
+  /**
    * Getters for DB\Literal implementations for various types/values.
    */
   public static function True () { return new \SparkLib\DB\True; }
