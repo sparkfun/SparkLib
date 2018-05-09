@@ -17,7 +17,6 @@ trait StaticContentHandlerTrait {
       $this->setLayout('default_full');
 
     if ($page->is_commentable) {
-      $mongo = \MongoDBI::getInstance();
 
       $filter = [
         "entity_table" => "custom_pages",
@@ -28,7 +27,7 @@ trait StaticContentHandlerTrait {
       if ($_SESSION['user']->isAuthenticated() && $_SESSION['user']->customer()->customer_is_moderator)
         unset($filter['visible']);
 
-      $comments = $mongo->comments->find($filter)->sort(["ratings_count" => -1, "ctime" => -1]);
+      $comments = \CustomerCommentSaurus::find($filter, ['sort' => ['ratings_count' => -1, 'ctime' => -1]]);
       $body->comments = $comments;
     }
 

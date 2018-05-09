@@ -164,7 +164,9 @@ class Validator {
 
       $errstring = 'invalid';
       if (is_array($filter)) {
-        $errstring = $filter[1];
+        if (array_key_exists(1, $filter)) {
+          $errstring = $filter[1];
+        }
         $filter = $filter[0];
       }
 

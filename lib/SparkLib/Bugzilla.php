@@ -1,6 +1,7 @@
 <?php
 namespace SparkLib;
 
+use \Exception;
 use SparkLib\Fail;
 use SparkLib\jsonRPC\Client;
 
@@ -144,7 +145,14 @@ class Bugzilla {
       $search_url .= '&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED';
     }
 
-    $csv  = file_get_contents($this->_uri . $search_url);
+    $context = stream_context_create([
+      'ssl' => [
+        'verify_peer'      => false,
+        'verify_peer_name' => false,
+      ]
+    ]);
+
+    $csv  = file_get_contents($this->_uri . $search_url, false, $context);
 
     $bugs = array();
 
@@ -175,7 +183,14 @@ class Bugzilla {
                 . '&emailtype1=substring&order=Bug&ctype=csv'
                 . '&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED';
 
-    $csv  = file_get_contents($this->_uri . $search_url);
+    $context = stream_context_create([
+      'ssl' => [
+        'verify_peer'      => false,
+        'verify_peer_name' => false,
+      ]
+    ]);
+
+    $csv  = file_get_contents($this->_uri . $search_url, false, $context);
 
     $bugs = array();
 

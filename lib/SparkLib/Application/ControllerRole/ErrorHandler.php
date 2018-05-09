@@ -78,21 +78,9 @@ trait ErrorHandler {
 
     $body->reason       = $reason;
     $body->search_term  = $search_term;
-
-    $url_terms    = trim(str_replace('/', ' ', $this->app()->requestUrl()));
-
-    $search_results = $this->getModule('SearchResults');
-    $search_results->build_results($url_terms, ['news', 'pages', 'products', 'resources', 'tutorials'], 1, 4, 'relevance|asc', false);
-
-    $body->search_results = $search_results;
-
-    $total_items = array_sum($search_results->getTotals());
-
-    if ($total_items < 1) {
-      $body->posts = \BlogPostSaurus::findLiveRandom(2);
-      $body->tutorials = \LearnTutorialSaurus::findPublicRandom(2);
-      $body->products = \StorefrontProductSaurus::findLiveRandom(4);
-    }
+    $body->posts = \BlogPostSaurus::findLiveRandom(2);
+    $body->tutorials = \LearnTutorialSaurus::findPublicRandom(2);
+    $body->products = \StorefrontProductSaurus::findLiveRandom(4);
 
     $this->layout()->title = "ERROR - 404 - NOT FOUND";
     $this->layout()->body = $body;

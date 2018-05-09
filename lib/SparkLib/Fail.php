@@ -30,7 +30,7 @@ class Fail {
   /**
    * Image to display with public errors.
    */
-  public static $img_url = 'https://dlnmh9ip6v2uc.cloudfront.net/images/sparkfail.png';
+  public static $img_url = 'https://cdn.sparkfun.com/images/sparkfail.png';
 
   /**
    * Send all errors straight to the log?
@@ -168,6 +168,58 @@ class Fail {
     } else {
       error_log($message_text);
     }
+
+  }
+
+  /**
+   * Log an arbitrary string or Exception for debugging purposes.
+   *
+   * Same as log(), except it doesn't show a message to the user.
+   *
+   * @param $message string|Exception message to log
+   */
+  public static function debug ($message) {
+
+    // Did we get an Exception?
+    if ($message instanceof \Exception) {
+
+      // Get a unique string - we can log this, and then display it to the
+      // user as a reference number.
+      self::$reference .= substr(sha1(time() . __FILE__), 0, 10) . ' ';
+
+      $message_text = self::$reference . ':: Uncaught ' . get_class($message) . ' - '
+                    . $message->getMessage() . "\n"
+                    . $message->getTraceAsString();
+    } elseif (is_array($message) || is_object($message)) {
+      $message_text = print_r($message, 1);
+    } else {
+      $message_text = $message;
+    }
+
+    // if we're grepping for something specific, make sure this message matches:
+    if (isset(static::$grep) && (! preg_match(static::$grep, $message_text))) {
+      return;
+    }
+
+    // If blode is sitting around, send it our message.
+    if (class_exists('Event')) {
+      Event::err($message_text);
+    }
+
+    if (static::$logUserAgent && isset($_SERVER['HTTP_USER_AGENT'])) {
+      $message_text .= ' [' . $_SERVER['HTTP_USER_AGENT'] . ']';
+    }
+
+    $message_text .= "\n";
+
+    if (isset(self::$logFile)) {
+      // Note deliberate error suppression; there's a good chance this
+      // write will fail from the command line.
+      @file_put_contents(self::$logFile, $message_text, \FILE_APPEND);
+    } else {
+      error_log($message_text);
+    }
+
   }
 
   /**
@@ -332,7 +384,7 @@ class Fail {
     // fuuuuuugly:
     print <<<HTML
 <style>
-  pre#sparkfail-errors {
+  pre.sparkfail-errors {
     position: absolute; top: 5px; left: 5px;
     z-index: 2147483647;
     text-align: left;
@@ -346,17 +398,17 @@ class Fail {
     background-position: bottom right;
   }
 
-  pre#sparkfail-errors b       { float: left; font-weight: bold; color: black; }
-  pre#sparkfail-errors b.close { cursor: pointer; color: blue; float: right; margin: 0; padding: 0; font-size: 1.1em; }
-  pre#sparkfail-errors hr      { margin: 0; padding: 0; }
+  pre.sparkfail-errors b       { float: left; font-weight: bold; color: black; }
+  pre.sparkfail-errors b.close { cursor: pointer; color: blue; float: right; margin: 0; padding: 0; font-size: 1.1em; }
+  pre.sparkfail-errors hr      { margin: 0; padding: 0; }
 </style>
-<pre id="sparkfail-errors">
-<b>SparkFail</b><b class="close" onclick="foo=document.getElementById('sparkfail-errors');foo.style.display='none';">[X]</b>
+<pre class="sparkfail-errors">
+<b>SparkFail</b><button type="button" class="close" onclick="this.parentElement.style.display='none';">[X]</button>
 <hr>
 HTML;
 
     print self::render() . "\n</pre>";
-    print "<script language=\"javascript\">$('body').keyup(function(e) { if(e.keyCode == 67) { $('#sparkfail-errors').hide() }; });</script>";
+    print "<script language=\"javascript\">$('body').keyup(function(e) { if(e.keyCode == 67) { $('.sparkfail-errors').hide() }; });</script>";
   }
 
 }
