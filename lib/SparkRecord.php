@@ -848,7 +848,7 @@ use \SparkLib\Blode\Event;
       $modification = $this->modificationInfo();
       $modification['id']      = (int)$this->getId();
       $modification['action']  = $action;
-      $modification['date']    = new MongoDate();
+      $modification['date']    = new \MongoDB\BSON\UTCDateTime();
       $modification['changed'] = $changes;
 
       $mongo->$table->insert($modification);

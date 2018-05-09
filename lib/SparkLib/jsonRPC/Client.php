@@ -159,7 +159,11 @@ class Client {
         'method'  => 'POST',
         'header'  => 'Content-type: application/json',
         'content' => $request
-      )
+      ),
+      'ssl' => [
+        'verify_peer'      => false,
+        'verify_peer_name' => false,
+      ],
     );
     $context = stream_context_create($opts);
     if ($fp = fopen($this->url, 'r', false, $context)) {

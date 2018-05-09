@@ -20,6 +20,10 @@ class DateTime {
     return static::format($date, 'Y-m-d G:i');
   }
 
+  public static function formatDefault ($date) {
+    return static::formatDefaultTimeAndDate($date);
+  }
+
   public static function interval_since ($date)
   {
     $iv = date_diff(
@@ -27,13 +31,13 @@ class DateTime {
       new \DateTime('now')
     );
 
-    $units = array(
+    $units = [
       ' yr ' => $iv->y,
       ' mo ' => $iv->m,
-      ' dy ' => $iv->d,
+      ' days ' => $iv->d,
       ' hr ' => $iv->h,
       ' min' => $iv->i,
-    );
+    ];
 
     $str   = '';
     $found = 0;
@@ -47,6 +51,10 @@ class DateTime {
         break;
     }
 
+    // edge case if change was really recent
+    if ($found==0 && $str=='' && $iv->s>0) {
+      $str = "a few seconds";
+    }
     return $str;
   }
 
@@ -173,6 +181,35 @@ class DateTime {
     if ($n >= (60*60*24*7*4*12))                 return 'about ' . round($n/(60*60*24*7*52)) . ' years ago';
 
     return false;
+  }
+
+  // Helper method to determine if now is inside the range of time.  Must be 24 hour time.
+  public static function inside_range ($start_time, $end_time)
+  {
+      $now   = new \DateTime('now');
+      $start = new \DateTime('now');
+      $end   = new \DateTime('now');
+
+      $start_time = explode(":", $start_time);
+      $start_hour = $start_time[0] ?: 0;
+      $start_min  = $start_time[1] ?: 0;
+
+      $end_time = explode(":", $end_time);
+      $end_hour = $end_time[0] ?: 0;
+      $end_min  = $end_time[1] ?: 0;
+
+      if ($start_hour > 24 || $end_hour > 24) {
+        return false;
+      }
+
+      date_time_set($start, $start_hour, $start_min);
+      date_time_set($end, $end_hour, $end_min);
+      
+      if ($now > $start && $now < $end) {
+          return true;
+      }
+  
+      return false;
   }
 
 }

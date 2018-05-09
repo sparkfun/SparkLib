@@ -4,6 +4,8 @@ namespace SparkLib;
 use \SparkLib\Renderable;
 use \SparkLib\Fail;
 
+use Dompdf\Dompdf;
+
 /**
  * SparkFun's approach to templating in PHP.
  *
@@ -326,11 +328,8 @@ class Template extends HTML implements Renderable {
    */
   public function outputPDF ($filespec = null)
   {
-    if (! class_exists('\DOMPDF'))
-      throw new \Exception('DOMPDF appears to be unavailable.');
-
-    $pdf = new \DOMPDF();
-    $pdf->load_html($this->render());
+    $pdf = new PDF();
+    $pdf->loadHtml($this->render());
     $pdf->render();
 
     if (strlen($filespec) > 0) {
@@ -363,11 +362,8 @@ class Template extends HTML implements Renderable {
    */
   public function streamPDF ($name = 'output.pdf', $options = null)
   {
-    if (! class_exists('\DOMPDF'))
-      throw new \Exception('DOMPDF appears to be unavailable.');
-
-    $pdf = new \DOMPDF();
-    $pdf->load_html($this->render());
+    $pdf = new PDF();
+    $pdf->loadHtml($this->render());
     $pdf->render();
 
     if (\headers_sent()) {

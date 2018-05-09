@@ -155,22 +155,25 @@ class Ship {
 
   public function setPackageValue($value = null) {
 
-    if ($this->_package == null)
+    if ($this->_package == null) {
       throw new Exception ('Create package before setting value.');
+    }
 
-if ($this->intl()) {
-    $DeclaredValue = new PackageDeclaredValueType();
-    $DeclaredValue->setCurrencyCode('USD');
+    if ($this->intl()) {
+      $DeclaredValue = new PackageDeclaredValueType();
+      $DeclaredValue->setCurrencyCode('USD');
 
-    if ($value)
-      $DeclaredValue->setMonetaryValue($value);
-    else
-      $DeclaredValue->setMonetaryValue($this->_totalValue);
+      if ($value) {
+        $DeclaredValue->setMonetaryValue($value);
+      } else {
+        $DeclaredValue->setMonetaryValue($this->_totalValue);
+      }
 
-    $PackageServiceOptions = new PackageServiceOptionsType();
-    $PackageServiceOptions->setDeclaredValue($DeclaredValue);
+      $PackageServiceOptions = new PackageServiceOptionsType();
+      $PackageServiceOptions->setDeclaredValue($DeclaredValue);
 
-    $this->_package->setPackageServiceOptions($PackageServiceOptions);}
+      $this->_package->setPackageServiceOptions($PackageServiceOptions);
+    }
   }
 
   public function setReferenceNumber($num) {

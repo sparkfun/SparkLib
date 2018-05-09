@@ -66,7 +66,10 @@ abstract class Iterator implements \Iterator {
 
     $results = [];
     $this->each(function ($result) use ($function, &$results) {
-      $results[] = call_user_func($function, $result);
+      $ret = call_user_func($function, $result);
+      if ($ret !== null) {
+        $results[] = $ret;
+      }
     });
 
     return $results;

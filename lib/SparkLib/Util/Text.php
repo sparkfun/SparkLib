@@ -235,34 +235,42 @@ public static function remove_accents( $str, $utf8=true )
     return $str;
   }
 
-  public static function truncate ($str, $len = 25, $pad = 0)
+  public static function truncate ($str, $len = 25, $pad = 0, $ellip = '&hellip;')
   {
     if(strlen($str) > $len - $pad)
-      $ret = substr($str, 0, $len) . '&hellip;';
-    else
-      $ret = $str;
-    return $ret;
+    {
+      return substr($str, 0, $len) . $ellip;
+    }
+
+    return $str;
   }
 
   public static function truncateWithTitle ($str, $len = 25, $pad = 0)
   {
     if(strlen($str) > $len - $pad)
-      $ret = '<span title="' . htmlentities($str) . '">' . substr($str, 0, $len) . '&hellip;</span>';
-    else
-      $ret = $str;
-    return $ret;
+    {
+      return '<span title="' . htmlentities($str) . '">' . substr($str, 0, $len) . '&hellip;</span>';
+    }
+
+    return $str;
   }
 
-  public static function truncateToWord ($str, $len = 25)
+  public static function truncateToWord ($str, $len = 25, $ellip = '&hellip;')
   {
     $str = trim(preg_replace('/\s+/', ' ', $str));
-    if (strlen($str) > $len) {
-      $ret = wordwrap($str, $len);
-      $ret = substr($ret, 0, strpos($ret, "\n"));
-      $ret .= '&hellip;';
-    } else
-      $ret = $str;
-    return $ret;
+
+    if (strlen($str) > $len)
+    {
+      if (strpos($str, ' ') != false && strpos($str, ' ') < 25)
+      {
+        $str = wordwrap($str, $len);
+        $len = strpos($str, "\n");
+      }
+
+      return self::truncate($str, $len, 0, $ellip);
+    }
+
+    return $str;
   }
 
   public static function depluralize($word)
@@ -307,6 +315,27 @@ public static function remove_accents( $str, $utf8=true )
       $size = round($div, 1)." KB";
     }
     return $size;
+  }
+
+  /**
+   * Make one line, turn all whitespace into tabs, trim, uppercase
+   */
+  public static function normalify ($str)
+  {
+    $str = preg_replace('/\s+/', ' ', $str);
+
+    $str = trim($str);
+
+    $str = strtoupper($str);
+
+    $str = self::remove_accents($str);
+
+    return $str;
+  }
+
+  public static function alphaNumericOnly ($str)
+  {
+    return preg_replace('/[^\-0-9A-Z]+/', '', strtoupper($str));
   }
 
 }

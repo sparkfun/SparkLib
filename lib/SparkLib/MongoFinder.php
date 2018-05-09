@@ -1,27 +1,28 @@
 <?php
 namespace SparkLib;
 
-use \MongoDBI as Mongo;
-use \SparkLib\Iterator;
+use \MongoDB;
+use \SparkLib\Iterator\WrappingIterator;
 
 /**
  * Class that creates a nice interface for accessing Mongo
  */
-class MongoFinder extends Iterator {
+class MongoFinder implements \OuterIterator {
 
   protected $_mongo;
+  protected $_mongoManager;
   protected $_mongoCursor;
-  protected $_collection;
-  protected $_class;
-  protected $_query;
+  protected $_collectionName;
+  protected $_wrapperClass;
+  protected $_mongoQuery;
   protected $_where = [];
   protected $_sort = [];
-  protected $_row;
   protected $_whereWaiting = false;
   protected $_sortWaiting = false;
   protected $_paramsChanged = false;
   protected $_resultCount;
-
+  protected $_iterator;
+  
   /**
    * Create new instance and store the collection name to be used in find()
    *
@@ -30,10 +31,18 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function __construct($collection, $class) {
-    $this->_mongo = Mongo::getInstance();
-    $this->_collection = $collection;
-    $this->_class = $class;
+  public function __construct ($collectionName, $wrapperClass) {
+    // don't know why there's a different syntax for geting the read preference to the Manager constructor, but this takes care of our current use cases.
+    if (defined('MONGO_READ_PREFERENCE') && MONGO_READ_PREFERENCE === 'RP_SECONDARY_PREFERRED') {
+      $readPreference = 'secondaryPreferred';
+    } else {
+      $readPreference = 'primaryPreferred';
+    }
+
+    // interesting, the new driver wants readPreference as a string.
+    $this->_mongoManager = new \MongoDB\Driver\Manager(MONGODB_SERVER, ['replicaSet' => MONGODB_REPLSET, 'readPreference' => $readPreference]);
+    $this->_collectionName = $collectionName;
+    $this->_wrapperClass = $wrapperClass;
     return $this;
   }
 
@@ -43,12 +52,34 @@ class MongoFinder extends Iterator {
    *
    * @return void
    */
-  protected function _checkWaiting() {
+  protected function _checkWaiting () {
     if ($this->_whereWaiting !== false)
       throw new \Exception('Mongo WHERE waiting completion');
 
     if ($this->_sortWaiting !== false)
       throw new \Exception('Mongo SORT waiting completion');
+  }
+
+  /**
+   * Checks if the query has been processed and is ready to iterate, or if there are changes pending
+   *
+   * @return void
+   */ 
+  protected function _isNotReady () {
+    return ( ! isset($this->_iterator) || $this->_paramsChanged );
+  }
+
+  /**
+   * Invokes find if there are pending changes or if not yet invoked
+   *
+   * @return void
+   */ 
+  protected function _makeReady () {
+    $this->_checkWaiting();
+    if ( $this->_isNotReady() ) {
+      $this->find();
+    }
+
   }
 
   /**
@@ -58,7 +89,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function where($key) {
+  public function where ($key) {
     $this->_checkWaiting();
 
     $this->_where[$key] = true;
@@ -75,7 +106,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function is($value, $comparison = false) {
+  public function is ($value, $comparison = false) {
     if (! $this->_where[$this->_whereWaiting])
       throw new \Exception('Mongo WHERE not called');
 
@@ -117,7 +148,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function isLike($regex, $flags = '') {
+  public function isLike ($regex, $flags = '') {
     if (! $this->_where[$this->_whereWaiting])
       throw new \Exception('Mongo WHERE not called');
 
@@ -143,11 +174,11 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function isNot($value, $comparison = false) {
+  public function isNot ($value, $comparison = false) {
     if (! $this->_where[$this->_whereWaiting])
       throw new \Exception('Mongo WHERE not called');
 
-    if(! $comparison) {
+    if (! $comparison) {
       $comparison = '=';
     }
 
@@ -156,7 +187,7 @@ class MongoFinder extends Iterator {
         if (is_array($value))
           $this->_where[$this->_whereWaiting] = [ '$not' =>  $value ];
         else
-          $this->_where[$this->_whereWaiting] = [ '$not' =>  new MongoRegex('/^' . $value . '$/') ];
+          $this->_where[$this->_whereWaiting] = [ '$not' =>  new MongoDB\BSON\Regex('/^' . $value . '$/') ];
         break;
       case '>':
         $this->_where[$this->_whereWaiting] = [ '$not' =>  [ '$gt' => $value ] ];
@@ -184,7 +215,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function eq($value) {
+  public function eq ($value) {
     $this->_paramsChanged = true;
     return $this->is($value, '=');
   }
@@ -196,8 +227,8 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function in($value) {
-    if(! is_array($value))
+  public function in ($value) {
+    if (! is_array($value))
       return $this;
 
     $this->_paramsChanged = true;
@@ -209,7 +240,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function isNull() {
+  public function isNull () {
     $this->_paramsChanged = true;
     return $this->is([ '$exists' => false ], '=');
   }
@@ -219,7 +250,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function isNotNull() {
+  public function isNotNull () {
     $this->_paramsChanged = true;
     return $this->is([ '$exists' => true ], '=');
   }
@@ -232,7 +263,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function orderBy($order) {
+  public function orderBy ($order) {
     $this->_checkWaiting();
 
     if (is_array($order)) {
@@ -266,7 +297,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function asc() {
+  public function asc () {
     if (! $this->_sort[$this->_sortWaiting])
       throw new \Exception('Mongo SORT not called');
 
@@ -282,7 +313,7 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function desc() {
+  public function desc () {
     if (! $this->_sort[$this->_sortWaiting])
       throw new \Exception('Mongo SORT not called');
 
@@ -294,60 +325,11 @@ class MongoFinder extends Iterator {
   }
 
   /**
-   * Moves internal pointer forward once
-   *
-   * @return MongoFinder
-   */
-  public function next() {
-    $this->_checkWaiting();
-
-    if (! isset($this->_mongoCursor) || $this->_paramsChanged)
-      $this->find();
-
-    $this->_mongoCursor->next();
-
-    return $this;
-  }
-
-  /**
-   * Moves internal pointer forward by $int
-   *
-   * @param int $int - number of times to skip the internal pointer
-   *
-   * @return MongoFinder
-   */
-  public function skip($int) {
-    $this->_checkWaiting();
-
-    if (! isset($this->_mongoCursor) || $this->_paramsChanged)
-      $this->find();
-
-    $this->_mongoCursor->skip($int);
-
-    return $this;
-  }
-
-  /**
-   * Moves internal pointer to beginning
-   *
-   * @return MongoFinder
-   */
-  public function rewind() {
-    $this->_checkWaiting();
-
-    if (! isset($this->_mongoCursor) || $this->_paramsChanged)
-      $this->find();
-
-    $this->_mongoCursor->rewind();
-    return $this;
-  }
-
-  /**
    * alias for getNext
    *
    * @return \Spark\$collection-wrapped Mongo thing
    */
-  public function getOne() {
+  public function getOne () {
     return $this->getNext();
   }
 
@@ -357,49 +339,31 @@ class MongoFinder extends Iterator {
    * @return \Spark\$collection-wrapped mongo-thing
    */
   public function getNext () {
-    $this->_checkWaiting();
-
-    if (! isset($this->_mongoCursor) || $this->_paramsChanged)
-      $this->find();
-
-    $result = $this->current();
-
-    if (false !== $result)
-      $this->next();
-
-    return $result;
+    $this->_makeReady();
+    return $this->_iterator->getNext();
   }
 
   /**
-   * Returns the current result at pointer
-   *
-   * @return \Spark\$collection-wrapped mongo-thing
-   */
-  public function current() {
-    $this->_checkWaiting();
-
-    if (! isset($this->_mongoCursor) || $this->_paramsChanged)
-      $this->find();
-
-    if (! $this->_mongoCursor->current())
-      return false;
-
-    return new $this->_class($this->_mongoCursor->current());
-  }
-
-  /**
-   * get a count of the result ste
+   * get a count of the results
    *
    * @return int
    */
-  public function count() {
-    if (! isset($this->_mongoCursor) || $this->_paramsChanged) {
-      $this->find();
+  public function count () {
+    if ($this->_isNotReady()) {
       $this->_resultCount = null;
     }
+    if (! isset($this->_resultCount)) {
+      $mongoCountCommand = new MongoDB\Driver\Command([ 'count' => $this->_collectionName, 'query' => $this->_where ]);
+      $cursor = $this->_mongoManager->executeCommand(MONGODB_DATABASE, $mongoCountCommand);
 
-    if (! isset($this->_resultCount))
-      $this->_resultCount = $this->_mongoCursor->count();
+      $countCommandResult = current($cursor->toArray());
+
+      if (! isset($countCommandResult->n) || ! (is_integer($countCommandResult->n))) {
+          throw new \UnexpectedValueException('MongoDB count command did not return a numeric "n" value');
+      }
+
+      $this->_resultCount = $countCommandResult->n;
+    }
 
     return $this->_resultCount;
   }
@@ -409,13 +373,15 @@ class MongoFinder extends Iterator {
    *
    * @return MongoFinder
    */
-  public function find() {
+  public function find () {
     $this->_checkWaiting();
-
-    $collection = $this->_collection;
-
-    $this->_mongoCursor = $this->_mongo->$collection->find($this->_where)->sort($this->_sort);
-    $this->_mongoCursor->next();
+    if (isset($this->_iterator)) {
+      $this->_clearResults();
+    }
+    $this->_mongoQuery = new MongoDB\Driver\Query($this->_where, ['sort' => $this->_sort]);
+    $this->_mongoCursor = $this->_mongoManager->executeQuery(MONGODB_DATABASE . '.' . $this->_collectionName, $this->_mongoQuery);
+    $this->_mongoCursor->setTypeMap(['root' => 'array', 'document' => 'array', 'array' => 'array']);
+    $this->_iterator = new WrappingIterator($this->_mongoCursor, $this->_wrapperClass);
 
     // Reset params so no new find runs
     $this->_paramsChanged = false;
@@ -423,19 +389,26 @@ class MongoFinder extends Iterator {
     return $this;
   }
 
+  protected function _clearResults () {
+    unset($this->_mongoQuery);
+    $this->_mongoQuery = null;
+    unset($this->_iterator);
+    $this->_iterator = null;
+    unset($this->_mongoCursor);
+    $this->_mongoCursor = null;
+  }
+
   /**
    * Resets all query info
    */
-  public function reset() {
+  public function reset () {
     $this->_where = [];
     $this->_sort = [];
     $this->_whereWaiting = false;
     $this->_sortWaiting = false;
     $this->_paramsChanged = false;
     $this->_resultCount = null;
-    $this->_row = null;
-    $this->_query = null;
-    $this->_mongoCursor = null;
+    $this->_clearResults();
   }
 
   /**
@@ -443,28 +416,77 @@ class MongoFinder extends Iterator {
    *
    * @return string
    */
-  public function getQuery() {
-    return 'db.' . $this->_collection . '.find(' . json_encode($this->_where) . ').sort(' . json_encode($this->_sort) . ').pretty()';
+  public function getQuery () {
+    return MONGODB_DATABASE . '.' . $this->_collectionName . '.find(' . json_encode($this->_where) .', \'sort\' =>' . json_encode($this->_sort) . ').pretty()';
   }
 
   /**
-   * Makes sure the current result is an instance of the class passed in
+   * For the OuterIterator interface
+   * Returns the underlying iterator
    *
    * @return boolean
    */
-  public function valid () {
-    return $this->_mongoCursor->current() instanceof $this->_class;
+  public function getInnerIterator () {
+    $this->_makeReady();
+
+    return $this->_iterator->getInnerIterator();
   }
 
   /**
+   * Returns the current result at pointer
+   *
+   * @return \Spark\$collection-wrapped mongo-thing
+   */
+  public function current () {
+    $this->_makeReady();
+
+    return $this->_iterator->current();
+  }
+
+  /**
+   * For the OuterIterator interface
    * Returns the mongo id of the mongo entity currently under the pointer
    *
    * @return string
    */
   public function key () { 
-    if (! isset($this->_mongoCursor) || $this->_paramsChanged)
-      $this->find();
-
     return (string) $this->current()->id();
   }
+
+  /**
+   * For the OuterIterator interface
+   * Moves internal pointer forward once
+   *
+   * @return MongoFinder
+   */
+  public function next () {
+    $this->_makeReady();
+
+    $this->_iterator->next();
+
+    return $this;
+  }
+
+  /**
+   * For the OuterIterator interface
+   * Blows away the current cursor and runs the query again since we can't rewind on the new mongo cursor
+   *
+   * @return MongoFinder
+   */
+  public function rewind () {
+    $this->find();
+    return $this;
+  }
+
+    /**
+   * For the OuterIterator interface
+   * Makes sure the current result is an instance of the class passed in
+   *
+   * @return boolean
+   */
+  public function valid () {
+    $this->_makeReady();
+    return $this->_iterator->valid();
+  }
+
 }

@@ -211,7 +211,7 @@ abstract class Request {
   public function __set ($key, $value)
   {
     if ($this->isFinal())
-      throw new Exception("can't change a finalized Request (trying to modify user input? make a copy instead.)");
+      throw new \Exception("can't change a finalized Request (trying to modify user input? make a copy instead.)");
     return $this->_values[$key] = $value;
   }
 

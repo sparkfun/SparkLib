@@ -12,10 +12,9 @@ use \CustomerCommentSaurus,
     \CustomerSaurus,
     \LogSaurus;
 
-use \MongoDate,
-    \MongoId,
-    \MongoDBI,
-    \Exception;
+use \MongoDbClient as Mongo;
+
+use \Exception;
 
 /**
  * Let a controller handle comment functions.
@@ -63,7 +62,7 @@ trait CommentHandler {
     try {
       $comment = new CustomerCommentSaurus($this->req()->bson);
     } catch(Exception $e) {
-      $this->app()->passMessage("Comment not found");
+      $this->app()->passMessage('Comment not found');
     }
 
     $this->respondTo()->html = function() use ($comment) {
@@ -89,7 +88,7 @@ trait CommentHandler {
     try {
       $comment = new CustomerCommentSaurus($this->req()->bson);
     } catch(Exception $e) {
-      $this->app()->passMessage("Comment not found");
+      $this->app()->passMessage('Comment not found');
     }
 
     if($comment->customer_id == $_SESSION['user']->customer()->id() || $_SESSION['user']->customer()->customer_is_moderator)
@@ -114,7 +113,7 @@ trait CommentHandler {
   {
     $status = true;
     $message = '';
-    $mongo = MongoDBI::getInstance();
+    $mongo = Mongo::getInstance();
     $comment = [];
 
     try {
@@ -134,22 +133,28 @@ trait CommentHandler {
       $message = 'Permission denied.';
     }
 
+    if(!$_SESSION['user']->customer()->email_verified) {
+      $status = false;
+      $message = 'You must verify your email address before you can comment.';
+    }
+
     if($status) {
       $parent_id = (isset($this->req()->parent_id)) ? $this->req()->parent_id : 0;
 
       $comment = new CustomerCommentSaurus([
-        "entity_table"  => $this->req()->entity,
-        "entity_id"     => $this->req()->entity_id,
-        "parent_id"     => $parent_id,
-        "customer_id"   => (int) $_SESSION['user']->customer()->id(),
-        "customer_role" => $_SESSION['user']->customer()->customers_role,
-        "ctime"         => new MongoDate(),
-        "mtime"         => new MongoDate(),
-        "ratings"       => [ (int) $_SESSION['user']->customer()->id() ],
-        "ratings_count" => 1,
-        "reports"       => 0,
-        "visible"       => true,
-        "text"          => $this->req()->text
+        'entity_table'  => $this->req()->entity,
+        'entity_id'     => $this->req()->entity_id,
+        'parent_id'     => $parent_id,
+        'customer_id'   => (int) $_SESSION['user']->customer()->id(),
+        'customer_role' => $_SESSION['user']->customer()->customers_role,
+        'ctime'         => new \MongoDB\BSON\UTCDateTime(),
+        'mtime'         => new \MongoDB\BSON\UTCDateTime(),
+        'ratings'       => [ (int) $_SESSION['user']->customer()->id() ],
+        'ratings_count' => 1,
+        'reports'       => 0,
+        'visible'       => true,
+        'pinned'        => false,
+        'text'          => $this->req()->text
       ]);
 
       // by default, hide replies to hidden comments, so they don't
@@ -161,12 +166,14 @@ trait CommentHandler {
         $comment->visible = $parent_comment->visible;
       }
 
-      $bl_results = DB::fetchAll("select * from comment_blacklists where :term ~* regex_needle", ['term' => $this->req()->text]);
+      // filter out non-printable characters before comparing to blacklist - but check the original comment too
+      $scan_this = preg_replace('/[[:^print:]]/', '', $this->req()->text) . $this->req()->text;
+      $bl_results = DB::fetchAll("select * from comment_blacklists where :term ~* regex_needle", ['term' => $scan_this]);
       $blacklisted = count($bl_results) > 0;
 
       if (!$blacklisted) {
         // TODO: should this be $comment->insert() instead ?
-        if(! $mongo->comments->insert($comment->getRecord())) {
+        if(! $mongo->comments->insertOne($comment->getRecord())) {
           $status = false;
           $message = 'Error saving comment, please try again later.';
         } else {
@@ -194,13 +201,16 @@ trait CommentHandler {
       if ($updated_html->entity_table == 'products') {
         $updated_html->do_heading  = false;
       }
-      $updated_html->comments = $mongo->comments->find([
-        'entity_table' => $this->req()->entity,
-        'entity_id'    => $this->req()->entity_id,
-        // make real sure we only show visible comments here (see 4f2cdfad9):
-        'visible'      => true,
-      ]);
-      $updated_html->comments->sort(["ratings_count" => -1, "ctime" => -1]);
+      $updated_html->comments = $mongo->comments->find(
+        [
+          'entity_table' => $this->req()->entity,
+          'entity_id'    => $this->req()->entity_id,
+          // make real sure we only show visible comments here (see 4f2cdfad9):
+          'visible'      => true,
+        ], [
+          'sort' => ['ratings_count' => -1, 'ctime' => -1]
+        ]
+      );
 
       return [
         'status'     => $status,
@@ -240,14 +250,14 @@ trait CommentHandler {
     }
 
     if($status) {
-      $mongo = MongoDBI::getInstance();
-      $mongo->comments->update(array('_id' => new MongoId($this->req()->bson)),
-                               array('$set' => array('visible' => false)));
+      $mongo = Mongo::getInstance();
+      $mongo->comments->updateOne(['_id' => new \MongoDB\BSON\ObjectId($this->req()->bson)],
+                                  ['$set' => ['visible' => false]]);
       LogSaurus::log('COMMENT_HIDE', $_SESSION['user']->customer()->id(), 'COMMERCE', $this->req()->bson);
     }
 
     $this->respondTo()->json = function() use ($status, $message) {
-      return array("status" => $status, 'message' => $message);
+      return ['status' => $status, 'message' => $message];
     };
   }
 
@@ -276,22 +286,21 @@ trait CommentHandler {
     }
 
     if($status) {
-      $mongo = MongoDBI::getInstance();
+      $mongo = Mongo::getInstance();
       try {
-        $mongo->comments->update(
+        $mongo->comments->updateMany(
           ['customer_id' => ['$in' => [$source_comment->customer_id, (int)$source_comment->customer_id]]],
-          ['$set' => ['visible' => false]],
-          ['multiple' => true]
+          ['$set' => ['visible' => false]]
         );
       } catch (Exception $e) {
         $status = false;
-        $message = "Failed to hide comments. Try back later.";
+        $message = 'Failed to hide comments. Try back later.';
       }
       LogSaurus::log('COMMENT_HIDE_ALL', $_SESSION['user']->customer()->id(), 'COMMERCE', $this->req()->bson);
     }
 
     $this->respondTo()->json = function() use ($status, $message) {
-      return ["status" => $status, 'message' => $message];
+      return ['status' => $status, 'message' => $message];
     };
   }
 
@@ -333,7 +342,7 @@ trait CommentHandler {
 
     $this->respondTo()->json = function() use ($status, $message, $can_comment) {
       return [
-        "status" => $status,
+        'status' => $status,
         'message' => $message,
         'can_comment' => $can_comment
       ];
@@ -359,18 +368,92 @@ trait CommentHandler {
     }
 
     if($status) {
-      $mongo = MongoDBI::getInstance();
-      $mongo->comments->update(array('_id' => new MongoId($this->req()->bson)),
-                               array('$set' => array('visible' => true)));
+      $mongo = Mongo::getInstance();
+      $mongo->comments->updateOne(['_id' => new \MongoDB\BSON\ObjectId($this->req()->bson)],
+                                  ['$set' => ['visible' => true]]);
       LogSaurus::log('COMMENT_SHOW', $_SESSION['user']->customer()->id(), 'COMMERCE', $this->req()->bson);
     }
 
     $this->respondTo()->json = function() use ($status, $message) {
-      return array("status" => true, 'message' => $message);
+      return ['status' => true, 'message' => $message];
+    };
+  }
+  /*
+   * Pin a comment.
+   * @access public
+   * @return void
+   */
+
+  public function pin_comment ()
+  {
+    $this->app()->require_authentication();
+
+    $status = true;
+    $message = '';
+    
+    try {
+      $this->req()->expect('bson');
+    } catch (Exception $e) {
+      $status = false;
+      $message = 'Expecting something else.';
+    }
+
+    if (!$_SESSION['user']->customer()->customer_is_moderator) {
+      $status = false;
+      $message = 'Only moderators can do that.';
+    }
+
+    if ($status) {
+      $mongo = Mongo::getInstance();
+      $mongo->comments->updateOne(
+        ['_id' => new \MongoDB\BSON\ObjectId($this->req()->bson)],
+        ['$set' => ['pinned' => true]]
+      );
+    }
+
+    $this->respondTo()->json = function() use ($status, $message) {
+      return ['status' => $status, 'message' => $message];
+    };
+  }
+
+    /* Unpin a comment
+     * @access public
+     * @return void
+     */
+  public function unpin_comment () 
+  { 
+    $this->app()->require_authentication();
+    
+    $status = true;
+    $message = '';
+    
+    try {
+      $this->req()->expect('bson');
+    } catch (Exception $e) {
+      $status = false;
+      $message = 'Expecting something else.';
+    }
+
+    if (!$_SESSION['user']->customer()->customer_is_moderator) {
+      $status = false;
+      $message = 'Only moderators can do that.';
+    }
+
+    if ($status) {
+      $mongo = Mongo::getInstance();
+      $mongo->comments->updateOne(
+        ['_id' => new \MongoDB\BSON\ObjectId($this->req()->bson)],
+        ['$set' => ['pinned' => false]]
+      );
+    }
+
+    $this->respondTo()->json = function() use ($status, $message) {
+      return ['status' => $status, 'message' => $message];
     };
   }
 
   /**
+
    * Rate a comment.
    *
    * @access public
@@ -381,25 +464,25 @@ trait CommentHandler {
     $this->app()->require_authentication();
     $this->req()->expect('bson');
 
-    $id = new MongoId($this->req()->bson);
+    $id = new \MongoDB\BSON\ObjectId($this->req()->bson);
     $customer = $_SESSION['user']->customer();
 
     // toggle customers rating of this comment
     // FIXME: need to support this sort of functionality in SparkRecordMongo
-    $mongo = MongoDBI::getInstance();
+    $mongo = Mongo::getInstance();
     if(array_key_exists($this->req()->bson, $customer->comments_rated())) {
-      $mongo->comments->update(array('_id'   => $id),
-                               array('$pull' => array('ratings'       => $customer->id()),
-                                     '$inc'  => array('ratings_count' => -1)));
+      $mongo->comments->updateOne(['_id'   => $id],
+                               ['$pull' => ['ratings'       => $customer->id()],
+                                '$inc'  => ['ratings_count' => -1]]);
     } else {
-      $mongo->comments->update(array('_id'       => $id),
-                               array('$addToSet' => array('ratings'       => $customer->id()),
-                                     '$inc'      => array('ratings_count' => 1)));
+      $mongo->comments->updateOne(['_id'       => $id],
+                               ['$addToSet' => ['ratings'       => $customer->id()],
+                                '$inc'      => ['ratings_count' => 1]]);
     }
 
     $comment = new CustomerCommentSaurus($id);
     $this->respondTo()->json = function() use ($comment) {
-      return array("status" => true, "rating" => $comment->rating());
+      return ['status' => true, 'rating' => $comment->rating()];
     };
   }
 
@@ -427,17 +510,17 @@ trait CommentHandler {
     }
 
     if($status) {
-      $mongo = MongoDBI::getInstance();
-      $comment_id = new MongoId($this->req()->bson);
-      $comment = $mongo->comments->findOne(array('_id' => $comment_id));
-      $mongo->comments->update(array('_id' => $comment_id),
-                               array('$inc' => array('reports' => 1)));
+      $mongo = Mongo::getInstance();
+      $comment_id = new \MongoDB\BSON\ObjectId($this->req()->bson);
+      $comment = $mongo->comments->findOne(['_id' => $comment_id]);
+      $mongo->comments->updateOne(['_id' => $comment_id],
+                               ['$inc' => ['reports' => 1]]);
 
       $this->send_report($comment);
     }
 
     $this->respondTo()->json = function() use ($status, $message) {
-      return array('status' => $status, 'message' => $message);
+      return ['status' => $status, 'message' => $message];
     };
 
     $this->respondTo()->html = function() use ($comment, $status, $message) {
@@ -473,14 +556,12 @@ trait CommentHandler {
 
     if ($can_edit) {
       $comment->text = $this->req()->text;
-      $comment->mtime = new MongoDate();
+      $comment->mtime = new \MongoDB\BSON\UTCDateTime();
       $comment->update();
       LogSaurus::log('COMMENT_EDIT', $_SESSION['user']->customer()->id(), 'COMMERCE', $this->req()->bson);
     }
 
     $this->respondTo()->json = function() use ($comment, $can_edit) {
-      $mongo = MongoDBI::getInstance();
-
       if (! $can_edit) {
         return ['status' => false, 'message' => 'Permission denied'];
       }
@@ -488,12 +569,15 @@ trait CommentHandler {
       $updated_html = $this->app()->partial('comments/view');
       $updated_html->entity_table = $comment->entity_table;
       $updated_html->entity_id    = $comment->entity_id;
-      $updated_html->comments = $mongo->comments->find([
-        "entity_table" => $comment->entity_table,
-        "entity_id"    => $comment->entity_id,
-        "visible"      => true,
-      ]);
-      $updated_html->comments->sort(array("ratings_count" => -1, "ctime" => -1));
+      $updated_html->comments = CustomerCommentSaurus::find(
+        [
+          'entity_table' => $comment->entity_table,
+          'entity_id'    => $comment->entity_id,
+          'visible'      => true,
+        ], [
+          'sort' => ['ratings_count' => -1, 'ctime' => -1]
+        ]
+      );
       return [
         'status'     => true,
         'comment_id' => (string) $comment->id(),
@@ -521,7 +605,7 @@ trait CommentHandler {
 
     $emailer = new Mailer();
     $emailer->AddAddress($customer->customers_email_address, $temp->alias);
-    $emailer->Subject = "Reply to SparkFun Comment #" . (string) $their_comment->id();
+    $emailer->Subject = 'Reply to SparkFun Comment #' . (string) $their_comment->id();
     $emailer->MsgHTML($temp->render());
 
     return $emailer->Send();

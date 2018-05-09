@@ -444,8 +444,17 @@ abstract class Controller {
     // Do not allow a value $presets to overwrite a value in the request object.
     $source = $this->req()->getArray();
     foreach ($presets as $field => $value) {
-      if (! isset($source[$field]))
+      if (! isset($source[$field])) {
         $source[$field] = $value;
+      }
+    }
+
+    foreach ($source as $field => $value) {
+      // fixes the conversion from 'null' to null
+      if (is_string($source[$field]) && strtolower($source[$field]) === 'null') {
+        $source[$field] = null;
+        $instance->$field = null;
+      }
     }
 
     try {
@@ -506,7 +515,13 @@ abstract class Controller {
     $fields = array_keys($req);
     foreach ($fields as $field) {
       if (! $instance->isValidField($field))
-        continue;
+          continue;
+
+      // fixes the conversion from 'null' to null
+      if (is_string($req[$field]) && strtolower($req[$field]) === 'null') {
+        $req[$field] = null;
+        $instance->$field = null;
+      }
 
       if ($req[$field] == $instance->$field) {
         unset($req[$field]);

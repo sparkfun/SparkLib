@@ -139,6 +139,20 @@ class DB {
   }
 
   /**
+   * Convenience method to execute a query with no returned results
+   *
+   * @param string $sql: sql statement. Can contain parameter placeholders
+   * @param array $params: optional array of parameters that match the
+   *                       placeholders in $sql
+   */
+  public static function execute ($sql, $params = [])
+  {
+    $dbh = self::pdo();
+    $sth = $dbh->prepare($sql);
+    return $sth->execute($params);
+  }
+
+  /**
    * Executes an array of statements
    *
    * Will catch and throw PDO errors
@@ -205,6 +219,64 @@ class DB {
    */
   public static function rollback () {
     self::pdo()->rollBack();
+  }
+
+  /**
+   * Wrap a function call in a transaction.
+   *
+   * Wraps the execution of the anonymous function given by $callback
+   * in a database transaction. If the result of the anonymous function
+   * is boolean FALSE, the transaction will be aborted (rollback), otherwise
+   * any database changes made in the function will be commited.
+   *
+   * Any uncaught exception inside the anonymous function will halt execution
+   * of this method. Neither a commit or rollback will be performed, but it
+   * will effectively abort the transaction when the database session ends.
+   *
+   * @param   $callback an anonymous function
+   * @returns the result of the anonymous function
+   *
+   * ex:
+   *
+   * \SparkLib\DB::transaction(function () use (&$error) {
+   *
+   *   try {
+   *     $order = new OrderSaurus;
+   *     $order->customers_id = 198212;
+   *     ...
+   *     $order->insert();
+   *   }
+   *   catch(Expception $ex) {
+   *     $error = $ex->getMessage();
+   *     return false; // will trigger a rollback
+   *   }
+   *
+   *   $osh = new OrdersStatusHistorySaurus;
+   *   $osh->orders_id = $order->id();
+   *   ...
+   *   $osh->insert(); // an exception here would stop execution of the method
+   *
+   *   return true;
+   * });
+   */
+  public static function transaction ($callable) {
+
+    if(! is_callable($callable))
+      return;
+
+    $dbh = self::pdo();
+    $dbh->beginTransaction();
+
+    $result = $callable();
+
+    if(false !== $result) {
+      $dbh->commit();
+    }
+    else {
+      $dbh->rollback();
+    }
+
+    return $result;
   }
 
 }

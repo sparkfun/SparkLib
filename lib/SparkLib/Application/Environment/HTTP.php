@@ -72,7 +72,10 @@ class HTTP extends Environment {
 
   public function header ($header)
   {
-    header($header);
+    // Don't complain if headers have been sent by something else...
+    if (!headers_sent()){
+      header($header);
+    }
   }
 
   /**
